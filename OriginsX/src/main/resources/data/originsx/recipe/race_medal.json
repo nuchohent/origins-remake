@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "IOI",
+    "ODO",
+    " O "
+  ],
+  "key": {
+    "I": "minecraft:iron_bars",
+    "O": "minecraft:crying_obsidian",
+    "D": "minecraft:diamond"
+  },
+  "result": {
+    "id": "originsx:race_medal",
+    "count": 1
+  }
+}

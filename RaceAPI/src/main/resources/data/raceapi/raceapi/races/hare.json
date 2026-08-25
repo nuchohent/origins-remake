@@ -1,0 +1,12 @@
+{
+  "name_key": "race.raceapi.hare.name",
+  "description_key": "race.raceapi.hare.desc",
+  "icon": "minecraft:rabbit_foot",
+  "difficulty": -1,
+  "powers": [
+    "raceapi:sprint_jump",
+    "raceapi:bouncy",
+    "raceapi:step_height",
+    "raceapi:speed"
+  ]
+}

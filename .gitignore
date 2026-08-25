@@ -1,0 +1,32 @@
+# --- Сборка и кэши (сотни МБ, генерируются автоматически) ---
+build/
+.gradle/
+run/
+runs/
+
+# Зависимости-джары (собираются из RaceAPI, в git не нужны)
+**/libs/*.jar
+
+# --- Крупные бинарники и временные файлы ---
+gradle.zip
+_race_dump/
+
+# Нерелевантный шаблон fancyhud (см. README)
+Default Project/
+
+# --- IDE ---
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# --- ОС ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Логи и краши тестовых запусков ---
+*.log
+hs_err_pid*
+replay_pid*

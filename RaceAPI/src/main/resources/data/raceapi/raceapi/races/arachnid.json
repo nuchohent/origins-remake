@@ -1,0 +1,13 @@
+{
+  "name_key": "race.raceapi.arachnid.name",
+  "description_key": "race.raceapi.arachnid.desc",
+  "icon": "minecraft:cobweb",
+  "difficulty": 1,
+  "scale": 0.85,
+  "powers": [
+    "raceapi:spider_climb",
+    "raceapi:wall_jump",
+    "raceapi:venom_touch",
+    "raceapi:max_health_minus"
+  ]
+}

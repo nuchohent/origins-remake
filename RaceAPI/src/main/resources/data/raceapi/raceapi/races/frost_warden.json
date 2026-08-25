@@ -1,0 +1,12 @@
+{
+  "name_key": "race.raceapi.frost_warden.name",
+  "description_key": "race.raceapi.frost_warden.desc",
+  "icon": "minecraft:snowball",
+  "difficulty": 1,
+  "powers": [
+    "raceapi:frost_touch",
+    "raceapi:frost_aura",
+    "raceapi:safe_landing",
+    "raceapi:slow"
+  ]
+}

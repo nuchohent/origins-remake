@@ -1,0 +1,12 @@
+{
+  "name_key": "race.raceapi.miner.name",
+  "description_key": "race.raceapi.miner.desc",
+  "icon": "minecraft:iron_pickaxe",
+  "difficulty": 1,
+  "powers": [
+    "raceapi:haste",
+    "raceapi:magnet",
+    "raceapi:step_height",
+    "raceapi:slow"
+  ]
+}

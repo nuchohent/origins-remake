@@ -1,0 +1,15 @@
+{
+  "name_key": "race.raceapi.phantom.name",
+  "description_key": "race.raceapi.phantom.desc",
+  "icon": "minecraft:phantom_membrane",
+  "difficulty": 2,
+  "scale": 0.95,
+  "powers": [
+    "raceapi:blink",
+    "raceapi:dash",
+    "raceapi:double_jump",
+    "raceapi:night_boost",
+    "raceapi:purified",
+    "raceapi:light_sensitive"
+  ]
+}

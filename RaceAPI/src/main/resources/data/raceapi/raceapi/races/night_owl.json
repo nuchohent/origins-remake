@@ -1,0 +1,11 @@
+{
+  "name_key": "race.raceapi.night_owl.name",
+  "description_key": "race.raceapi.night_owl.desc",
+  "icon": "minecraft:lantern",
+  "difficulty": -2,
+  "powers": [
+    "raceapi:night_vision",
+    "raceapi:night_boost",
+    "raceapi:detector"
+  ]
+}

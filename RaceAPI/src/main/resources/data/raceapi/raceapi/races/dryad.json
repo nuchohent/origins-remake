@@ -1,0 +1,12 @@
+{
+  "name_key": "race.raceapi.dryad.name",
+  "description_key": "race.raceapi.dryad.desc",
+  "icon": "minecraft:oak_sapling",
+  "difficulty": -1,
+  "powers": [
+    "raceapi:day_boost",
+    "raceapi:purified",
+    "raceapi:aqua_haste",
+    "raceapi:regeneration"
+  ]
+}

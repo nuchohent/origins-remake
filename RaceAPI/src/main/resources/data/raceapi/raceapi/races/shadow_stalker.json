@@ -1,0 +1,14 @@
+{
+  "name_key": "race.raceapi.shadow_stalker.name",
+  "description_key": "race.raceapi.shadow_stalker.desc",
+  "icon": "minecraft:spyglass",
+  "difficulty": 3,
+  "scale": 0.9,
+  "powers": [
+    "raceapi:phase_dash",
+    "raceapi:kinetic_counter",
+    "raceapi:night_vision",
+    "raceapi:light_sensitive",
+    "raceapi:frail"
+  ]
+}

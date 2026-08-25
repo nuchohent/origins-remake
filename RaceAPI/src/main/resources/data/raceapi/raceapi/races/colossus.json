@@ -1,0 +1,14 @@
+{
+  "name_key": "race.raceapi.colossus.name",
+  "description_key": "race.raceapi.colossus.desc",
+  "icon": "minecraft:anvil",
+  "difficulty": 3,
+  "scale": 1.3,
+  "powers": [
+    "raceapi:heavy_hitter",
+    "raceapi:thorns",
+    "raceapi:max_health_plus",
+    "raceapi:slow",
+    "raceapi:ravenous"
+  ]
+}
