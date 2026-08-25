@@ -59,8 +59,11 @@ public class PhaseDashPower implements Power {
             horizontal = look;
         }
         horizontal = horizontal.normalize();
+        // start/end ride half a body height up for the wall scan; the dash
+        // itself must land with the feet at the original ground level
         Vec3 start = player.position().add(0, player.getBbHeight() / 2, 0);
         Vec3 end = start.add(horizontal.scale(distance));
+        Vec3 dest = player.position().add(horizontal.scale(distance));
 
         // Scan the path. Thin walls (a run of at most 1.5 blocks) are passed
         // through; thick walls block the dash.
@@ -90,7 +93,7 @@ public class PhaseDashPower implements Power {
         if (!PowerCooldowns.tryUse(player, id, cooldownTicks)) return;
 
         CooldownPayload.send(player, id.toString(), cooldownTicks, cooldownTicks);
-        player.teleportTo(end.x, end.y, end.z);
+        player.teleportTo(dest.x, dest.y, dest.z);
         player.fallDistance = 0;
         // keep some forward momentum after the phase (blocks/sec -> per tick)
         player.setDeltaMovement(player.getDeltaMovement().add(horizontal.scale(dashVelocity / 20.0)));

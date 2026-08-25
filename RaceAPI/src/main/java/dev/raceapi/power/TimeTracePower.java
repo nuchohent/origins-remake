@@ -6,14 +6,19 @@ import dev.raceapi.race.Power;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public class TimeTracePower implements Power {
@@ -61,6 +66,7 @@ public class TimeTracePower implements Power {
         if (!active) {
             TraceState newState = new TraceState();
             newState.savedPos = player.position();
+            newState.savedDimension = player.level().dimension();
             newState.savedHealth = player.getHealth();
             newState.tickCount = 0;
             newState.active = true;
@@ -98,7 +104,29 @@ public class TimeTracePower implements Power {
             return;
         }
         ServerLevel level = RaceUtils.serverLevel(player);
-        player.teleportTo(state.savedPos.x, state.savedPos.y, state.savedPos.z);
+        if (state.savedDimension != null && state.savedDimension != level.dimension()) {
+            MinecraftServer server = level.getServer();
+            level = server == null ? null : server.getLevel(state.savedDimension);
+        }
+        if (level == null) {
+            return;
+        }
+        Vec3 pos = state.savedPos;
+        double r = player.getBbWidth() / 2.0;
+        double h = player.getBbHeight();
+        // nudge the landing point upward while it is wedged inside blocks;
+        // give up (keeping the mark) when nothing fits below the world ceiling
+        while (!level.noCollision(player,
+                new AABB(pos.x - r, pos.y, pos.z - r, pos.x + r, pos.y + h, pos.z + r))) {
+            pos = pos.add(0, 1, 0);
+            if (!level.isInsideBuildHeight((int) (pos.y + h))) {
+                return;
+            }
+        }
+        if (!player.teleportTo(level, pos.x, pos.y, pos.z, Set.of(),
+                player.getYRot(), player.getXRot(), true)) {
+            return;
+        }
         if (player.getHealth() > state.savedHealth) {
             player.setHealth(state.savedHealth);
         }
@@ -116,6 +144,7 @@ public class TimeTracePower implements Power {
 
     private static class TraceState {
         Vec3 savedPos;
+        ResourceKey<Level> savedDimension;
         float savedHealth;
         int tickCount;
         boolean active;

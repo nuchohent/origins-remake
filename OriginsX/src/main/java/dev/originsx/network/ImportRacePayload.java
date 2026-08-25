@@ -34,7 +34,8 @@ public record ImportRacePayload(String share) implements CustomPacketPayload {
             Identifier.fromNamespaceAndPath("originsx", "import_race"));
 
     public static final StreamCodec<FriendlyByteBuf, ImportRacePayload> STREAM_CODEC =
-            StreamCodec.composite(ByteBufCodecs.STRING_UTF8, ImportRacePayload::share, ImportRacePayload::new);
+            StreamCodec.composite(ByteBufCodecs.stringUtf8(MAX_SHARE_LENGTH),
+                    ImportRacePayload::share, ImportRacePayload::new);
 
     public static void handle(ImportRacePayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
@@ -85,8 +86,11 @@ public record ImportRacePayload(String share) implements CustomPacketPayload {
                         .findFirst();
                 if (existing.isPresent()) {
                     String fileName = existing.get().getFileName().toString();
-                    return Identifier.fromNamespaceAndPath("imported",
-                            fileName.substring(0, fileName.length() - ".json".length()));
+                    Identifier dup = Identifier.tryParse("imported:"
+                            + fileName.substring(0, fileName.length() - ".json".length()));
+                    if (dup != null) {
+                        return dup;
+                    }
                 }
             }
         }

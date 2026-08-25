@@ -22,7 +22,7 @@ public class InverseRegenerationPower implements Power {
         this.id = id;
         this.difficulty = difficulty;
         this.damagePerTick = damagePerTick;
-        this.damageTickInterval = damageTickInterval;
+        this.damageTickInterval = Math.max(1, damageTickInterval);
         this.foodThreshold = foodThreshold;
         this.regenPunishment = regenPunishment;
     }
@@ -56,8 +56,7 @@ public class InverseRegenerationPower implements Power {
     public float onHurt(ServerPlayer player, DamageSource source, float amount) {
         if (player.hasEffect(net.minecraft.world.effect.MobEffects.REGENERATION)) {
             player.removeEffect(net.minecraft.world.effect.MobEffects.REGENERATION);
-            player.hurt(player.damageSources().magic(), amount * regenPunishment);
-            return 0;
+            return amount * regenPunishment;
         }
         return amount;
     }

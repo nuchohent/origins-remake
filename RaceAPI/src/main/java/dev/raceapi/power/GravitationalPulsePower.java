@@ -64,8 +64,8 @@ public class GravitationalPulsePower implements Power {
             release(player, charging);
             return;
         }
-        if (!PowerCooldowns.tryUse(player, id, cooldownTicks)) return;
-        CooldownPayload.send(player, id.toString(), cooldownTicks, cooldownTicks);
+        if (PowerCooldowns.remaining(player, id, cooldownTicks) > 0) return;
+        PowerCooldowns.markPendingUse(player, id);
         states.put(player.getUUID(), new ChargeState());
     }
 
@@ -96,11 +96,18 @@ public class GravitationalPulsePower implements Power {
     @Override
     public void onRemove(ServerPlayer player) {
         states.remove(player.getUUID());
+        PowerCooldowns.clearPendingUse(player, id);
     }
 
     private void release(ServerPlayer player, ChargeState state) {
         if (state.released) return;
         state.released = true;
+
+        // the cooldown starts when the pulse actually goes out (early or
+        // fully charged alike), so a second press can always reach the
+        // early-release branch above
+        PowerCooldowns.forceUse(player, id);
+        CooldownPayload.send(player, id.toString(), cooldownTicks, cooldownTicks);
 
         // push/pull is decided at release time by the current sneak state
         boolean push = player.isShiftKeyDown();

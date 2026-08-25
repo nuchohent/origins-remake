@@ -25,11 +25,16 @@ public class ProgressData extends SavedData {
 
     private final Map<String, Integer> tiers = new HashMap<>();
 
+    private static volatile boolean migrated;
+
     public static ProgressData get(ServerLevel level) {
         // always the overworld's storage: progress is global, not per-dimension
         ServerLevel overworld = level.getServer().overworld();
         ProgressData data = overworld.getDataStorage().computeIfAbsent(TYPE);
-        migrateStaleDimensionCopies(level, overworld, data);
+        if (!migrated) {
+            migrated = true;
+            migrateStaleDimensionCopies(level, overworld, data);
+        }
         return data;
     }
 

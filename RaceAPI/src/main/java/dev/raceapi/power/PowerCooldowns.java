@@ -18,7 +18,13 @@ public final class PowerCooldowns {
         return "raceapi_cd_" + id;
     }
 
-    /** Records the use and returns true if the power was ready, false if still cooling down. */
+    private static String pendingKey(Identifier id) {
+        return "raceapi_pend_" + id;
+    }
+
+    /**
+     * Records the use and returns true if the power was ready, false if still cooling down.
+     */
     public static boolean tryUse(ServerPlayer player, Identifier id, int cooldownTicks) {
         CompoundTag data = player.getPersistentData();
         long lastUsed = data.getLongOr(key(id), 0L);
@@ -27,6 +33,7 @@ public final class PowerCooldowns {
             return false;
         }
         data.putLong(key(id), gameTime);
+        data.remove(pendingKey(id));
         return true;
     }
 
@@ -37,7 +44,9 @@ public final class PowerCooldowns {
      * base cooldown is still running.
      */
     public static void forceUse(ServerPlayer player, Identifier id) {
-        player.getPersistentData().putLong(key(id), RaceUtils.serverLevel(player).getGameTime());
+        CompoundTag data = player.getPersistentData();
+        data.putLong(key(id), RaceUtils.serverLevel(player).getGameTime());
+        data.remove(pendingKey(id));
     }
 
     /** Remaining cooldown ticks for the player (0 = ready). */
@@ -48,5 +57,34 @@ public final class PowerCooldowns {
         }
         long elapsed = RaceUtils.serverLevel(player).getGameTime() - lastUsed;
         return (int) Math.max(0, cooldownTicks - elapsed);
+    }
+
+    /**
+     * Stored last-use tick (0 = never used); lets callers detect a fresh
+     * {@link #tryUse}/{@link #forceUse} write made during a hook call.
+     */
+    public static long lastUseTick(ServerPlayer player, Identifier id) {
+        return player.getPersistentData().getLongOr(key(id), 0L);
+    }
+
+    /**
+     * Marks that {@code onKeyPressed} took over the press without entering
+     * the cooldown yet (e.g. a charge-and-release ability waiting for its
+     * second press to complete). The keybind pipeline keeps the resource cost
+     * across all presses of one activation while this flag is set; follow-up
+     * presses are not billed again.
+     */
+    public static void markPendingUse(ServerPlayer player, Identifier id) {
+        player.getPersistentData().putBoolean(pendingKey(id), true);
+    }
+
+    /** Whether {@link #markPendingUse} is currently set for the power. */
+    public static boolean hasPendingUse(ServerPlayer player, Identifier id) {
+        return player.getPersistentData().getBoolean(pendingKey(id)).orElse(false);
+    }
+
+    /** Drops the pending-activation flag (e.g. the race was removed mid-activation). */
+    public static void clearPendingUse(ServerPlayer player, Identifier id) {
+        player.getPersistentData().remove(pendingKey(id));
     }
 }

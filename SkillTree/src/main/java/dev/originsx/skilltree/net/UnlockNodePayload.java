@@ -35,7 +35,7 @@ public record UnlockNodePayload(String nodeId) implements CustomPacketPayload {
             SkillGate.UnlockResult result = SkillGate.tryUnlock(player, payload.nodeId(), tierOut);
             if (result == SkillGate.UnlockResult.SUCCESS) {
                 // Re-attach the whole race so the new tier takes effect instantly
-                dev.raceapi.player.RaceManager.applyPersistedRace(player);
+                dev.raceapi.player.RaceManager.applyPersistedRace(player, false);
             }
             // failures (requirements, max tier...) are visible in the tree UI;
             // no chat spam

@@ -22,7 +22,7 @@ public class ToughnessPower implements Power {
     public ToughnessPower(Identifier id, int difficulty, double reduction) {
         this.id = id;
         this.difficulty = difficulty;
-        this.reduction = reduction;
+        this.reduction = Math.min(0.9, Math.max(0.0, reduction));
     }
 
     @Override

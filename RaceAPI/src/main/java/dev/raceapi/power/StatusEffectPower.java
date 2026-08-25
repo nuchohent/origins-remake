@@ -2,6 +2,8 @@ package dev.raceapi.power;
 
 import dev.raceapi.race.Power;
 import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
@@ -85,7 +87,17 @@ public class StatusEffectPower implements Power {
 
     @Override
     public void onRemove(ServerPlayer player) {
-        player.removeEffect(effect);
+        CompoundTag data = player.getPersistentData();
+        String key = stateKey();
+        if (!data.contains(key)) {
+            return;
+        }
+        int grantedAmplifier = data.getIntOr(key, amplifier);
+        data.remove(key);
+        MobEffectInstance current = player.getEffect(effect);
+        if (current != null && isOurs(current, grantedAmplifier)) {
+            player.removeEffect(effect);
+        }
     }
 
     private void apply(ServerPlayer player) {
@@ -96,5 +108,15 @@ public class StatusEffectPower implements Power {
         player.addEffect(new MobEffectInstance(effect,
                 infinite ? MobEffectInstance.INFINITE_DURATION : durationTicks,
                 amplifier, false, false, true));
+        player.getPersistentData().putInt(stateKey(), amplifier);
+    }
+
+    private boolean isOurs(MobEffectInstance current, int grantedAmplifier) {
+        return current.getAmplifier() == grantedAmplifier
+                && (infinite ? current.isInfiniteDuration() : current.getDuration() <= durationTicks);
+    }
+
+    private String stateKey() {
+        return "raceapi_eff_" + id + "_" + BuiltInRegistries.MOB_EFFECT.getKey(effect.value());
     }
 }

@@ -7,6 +7,7 @@ import dev.originsx.skilltree.SkillTreeMod;
 import dev.originsx.skilltree.tree.SkillTree;
 import dev.originsx.skilltree.tree.TreeNode;
 import dev.originsx.skilltree.tree.TreeManager;
+import dev.raceapi.data.ParseErrors;
 import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
@@ -18,8 +19,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Loads skill tree definitions from {@code data/<namespace>/skilltree/*.json}.
@@ -43,6 +47,7 @@ import java.util.Map;
 public class SkillTreeLoader extends SimplePreparableReloadListener<Map<Identifier, JsonElement>> {
 
     private static final FileToIdConverter CONVERTER = FileToIdConverter.json("skilltree");
+    private static final Pattern NODE_ID = Pattern.compile("[a-z0-9_.-]+");
 
     @Override
     protected Map<Identifier, JsonElement> prepare(ResourceManager resourceManager, ProfilerFiller profiler) {
@@ -93,15 +98,29 @@ public class SkillTreeLoader extends SimplePreparableReloadListener<Map<Identifi
         }
         List<TreeNode> nodes = new ArrayList<>();
         Map<Integer, TreeNode> byIndex = new HashMap<>();
+        Set<String> seenIds = new HashSet<>();
         var array = json.getAsJsonArray("nodes");
         for (JsonElement element : array) {
             if (!element.isJsonObject()) {
                 continue;
             }
             TreeNode node = parseNode(treeId, element.getAsJsonObject());
-            if (node != null) {
-                nodes.add(node);
-                byIndex.put(node.index(), node);
+            if (node == null) {
+                continue;
+            }
+            if (!seenIds.add(node.id())) {
+                ParseErrors.error("Duplicate node id '" + node.id() + "' in skill tree " + treeId);
+                continue;
+            }
+            nodes.add(node);
+            byIndex.put(node.index(), node);
+        }
+        for (TreeNode node : nodes) {
+            for (String require : node.requires()) {
+                if (!seenIds.contains(require)) {
+                    SkillTreeMod.LOGGER.warn("Node '{}' in tree {} requires unknown node '{}'",
+                            node.id(), treeId, require);
+                }
             }
         }
         return new SkillTree(treeId, raceId, title, List.copyOf(nodes), Map.copyOf(byIndex),
@@ -110,6 +129,11 @@ public class SkillTreeLoader extends SimplePreparableReloadListener<Map<Identifi
 
     private static TreeNode parseNode(Identifier treeId, JsonObject json) {
         String nodeId = requiredString(json, "id");
+        if (nodeId == null || !NODE_ID.matcher(nodeId).matches()) {
+            ParseErrors.error("Node '" + nodeId + "' in tree " + treeId
+                    + " has a missing or invalid id (expected [a-z0-9_.-]+)");
+            return null;
+        }
         if (!json.has("index") || !json.get("index").isJsonPrimitive()) {
             SkillTreeMod.LOGGER.error("Node '{}' in tree {} is missing its power index", nodeId, treeId);
             return null;

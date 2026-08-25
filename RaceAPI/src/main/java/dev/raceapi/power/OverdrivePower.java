@@ -3,6 +3,7 @@ package dev.raceapi.power;
 import dev.raceapi.util.RaceUtils;
 import dev.raceapi.race.Power;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -53,14 +54,13 @@ public class OverdrivePower implements Power {
         enabled.put(player.getUUID(), !current);
         ServerLevel level = RaceUtils.serverLevel(player);
         if (!current) {
-            player.addEffect(new MobEffectInstance(MobEffects.SPEED,
-                    MobEffectInstance.INFINITE_DURATION, 1, false, false, true));
+            applySpeed(player);
             // HUD indicator instead of a chat line
             dev.raceapi.network.PowerStatePayload.send(player, id.toString(), true);
             level.playSound(null, player.getX(), player.getY(), player.getZ(),
                     SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 0.6f, 1.5f);
         } else {
-            player.removeEffect(MobEffects.SPEED);
+            removeSpeed(player);
             dev.raceapi.network.PowerStatePayload.send(player, id.toString(), false);
             level.playSound(null, player.getX(), player.getY(), player.getZ(),
                     SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 0.6f, 1.0f);
@@ -73,8 +73,7 @@ public class OverdrivePower implements Power {
         ServerLevel level = RaceUtils.serverLevel(player);
 
         if (!player.hasEffect(MobEffects.SPEED)) {
-            player.addEffect(new MobEffectInstance(MobEffects.SPEED,
-                    MobEffectInstance.INFINITE_DURATION, 1, false, false, true));
+            applySpeed(player);
         }
 
         if (level.getGameTime() % 20 == 0) {
@@ -116,7 +115,30 @@ public class OverdrivePower implements Power {
     @Override
     public void onRemove(ServerPlayer player) {
         enabled.remove(player.getUUID());
-        player.removeEffect(MobEffects.SPEED);
+        removeSpeed(player);
         dev.raceapi.network.PowerStatePayload.send(player, id.toString(), false);
+    }
+
+    private void applySpeed(ServerPlayer player) {
+        player.addEffect(new MobEffectInstance(MobEffects.SPEED,
+                MobEffectInstance.INFINITE_DURATION, 1, false, false, true));
+        player.getPersistentData().putInt(speedGrantKey(), 1);
+    }
+
+    private void removeSpeed(ServerPlayer player) {
+        CompoundTag data = player.getPersistentData();
+        String key = speedGrantKey();
+        if (!data.contains(key)) {
+            return;
+        }
+        data.remove(key);
+        MobEffectInstance current = player.getEffect(MobEffects.SPEED);
+        if (current != null && current.getAmplifier() == 1 && current.isInfiniteDuration()) {
+            player.removeEffect(MobEffects.SPEED);
+        }
+    }
+
+    private String speedGrantKey() {
+        return "raceapi_eff_" + id + "_minecraft:speed";
     }
 }

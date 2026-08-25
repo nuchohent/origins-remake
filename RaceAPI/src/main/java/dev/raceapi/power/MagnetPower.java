@@ -7,7 +7,9 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -61,6 +63,9 @@ public class MagnetPower implements Power {
 
         for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, box,
                 e -> e.isAlive() && !e.hasPickUpDelay())) {
+            if (blockedFromPlayer(player, item.position())) {
+                continue;
+            }
             Vec3 delta = target.subtract(item.position());
             if (delta.lengthSqr() < 0.0001) {
                 continue;
@@ -70,6 +75,9 @@ public class MagnetPower implements Power {
         }
         for (ExperienceOrb orb : level.getEntitiesOfClass(ExperienceOrb.class, box,
                 ExperienceOrb::isAlive)) {
+            if (blockedFromPlayer(player, orb.position())) {
+                continue;
+            }
             Vec3 delta = target.subtract(orb.position());
             if (delta.lengthSqr() < 0.0001) {
                 continue;
@@ -77,5 +85,12 @@ public class MagnetPower implements Power {
             orb.setDeltaMovement(orb.getDeltaMovement().scale(0.5).add(delta.normalize().scale(0.3)));
             orb.needsSync = true;
         }
+    }
+
+    private static boolean blockedFromPlayer(ServerPlayer player, Vec3 targetPos) {
+        return RaceUtils.serverLevel(player)
+                .clip(new ClipContext(player.getEyePosition(), targetPos,
+                        ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player))
+                .getType() == HitResult.Type.BLOCK;
     }
 }

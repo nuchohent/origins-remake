@@ -48,6 +48,13 @@ public final class CostedPower implements Power {
     }
 
     @Override
+    public double getResourceCost(ServerPlayer player) {
+        // delegate first so wrappers below this one (e.g. ConditionalPower)
+        // can suppress the whole price of presses that are guaranteed no-ops
+        return delegate.getResourceCost(player) + cost;
+    }
+
+    @Override
     public Identifier getId() {
         return delegate.getId();
     }

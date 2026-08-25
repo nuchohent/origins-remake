@@ -396,7 +396,7 @@ public final class Conditions {
     }
 
     private static Condition gamemodeCondition(JsonObject json) {
-        String mode = getString(json, "mode", "survival");
+        String mode = getString(json, "mode", "survival").toLowerCase(java.util.Locale.ROOT);
         net.minecraft.world.level.GameType gameType = net.minecraft.world.level.GameType.byName(mode, null);
         if (gameType == null) {
             LOGGER.error("Condition gamemode: unknown mode '{}'", mode);
@@ -650,8 +650,8 @@ public final class Conditions {
         register("not_in_water", json -> player -> !player.isInWater());
         register("on_ground", json -> ServerPlayer::onGround);
         register("in_air", json -> player -> !player.onGround());
-        register("is_day", json -> player -> player.level().getOverworldClockTime() % 24000 < 12000);
-        register("is_night", json -> player -> player.level().getOverworldClockTime() % 24000 >= 12000);
+        register("is_day", json -> player -> Math.floorMod(player.level().getOverworldClockTime(), 24000L) < 12000);
+        register("is_night", json -> player -> Math.floorMod(player.level().getOverworldClockTime(), 24000L) >= 12000);
         register("is_sprinting", json -> ServerPlayer::isSprinting);
         register("is_crouching", json -> ServerPlayer::isCrouching);
         register("is_on_fire", json -> ServerPlayer::isOnFire);

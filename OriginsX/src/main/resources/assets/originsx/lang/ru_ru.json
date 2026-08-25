@@ -287,6 +287,7 @@
   "originsx.creator.type.venom_touch": "Ядовитое касание",
   "originsx.creator.type.wall_jump": "Прыжок от стены",
   "originsx.creator.update": "Сохранить силу",
+  "originsx.creator.save.id.taken": "Этот ID уже занят — раса сохранена как %s.",
   "originsx.gui.back": "Назад",
   "originsx.gui.carousel.hint": "Нажмите на расу для подробностей",
   "originsx.gui.create_race": "Создать расу",

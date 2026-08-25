@@ -287,6 +287,7 @@
   "originsx.creator.type.venom_touch": "Venom touch",
   "originsx.creator.type.wall_jump": "Wall jump",
   "originsx.creator.update": "Update power",
+  "originsx.creator.save.id.taken": "This ID is already taken — race saved as %s.",
   "originsx.gui.back": "Back",
   "originsx.gui.carousel.hint": "Click a race to see details",
   "originsx.gui.create_race": "Create Race",

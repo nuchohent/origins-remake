@@ -81,7 +81,7 @@ public class KineticCounterPower implements Power {
                 // missed window: lock out from NOW — tryUse would reject the
                 // write while the base cooldown from the press is still running
                 PowerCooldowns.forceUse(player, id);
-                CooldownPayload.send(player, id.toString(), missCooldownTicks, missCooldownTicks);
+                CooldownPayload.send(player, id.toString(), baseCooldownTicks, baseCooldownTicks);
                 player.sendSystemMessage(Component.translatable("power.raceapi.kinetic_counter.miss"));
             }
             parryTimers.remove(uuid);

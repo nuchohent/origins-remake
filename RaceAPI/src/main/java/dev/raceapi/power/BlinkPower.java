@@ -7,10 +7,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.gameevent.GameEvent;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -75,17 +77,25 @@ public class BlinkPower implements Power {
     @Override
     public void onKeyPressed(ServerPlayer player) {
         // resolve the destination FIRST so a failed blink does not burn the
-        // cooldown
+        // cooldown; the landing point must fit the whole bounding box, so the
+        // blink settles on the last fully free spot along the ray
+        ServerLevel level = RaceUtils.serverLevel(player);
         Vec3 from = player.position().add(0, player.getEyeHeight() * 0.5, 0);
         Vec3 look = player.getLookAngle();
+        double r = player.getBbWidth() / 2.0;
+        double h = player.getBbHeight();
         Vec3 target = null;
         for (double d = 1.0; d <= range; d += 0.5) {
             Vec3 candidate = from.add(look.x * d, look.y * d, look.z * d);
             BlockPos pos = BlockPos.containing(candidate);
-            if (!player.level().getBlockState(pos).isAir()) {
+            if (!level.getBlockState(pos).isAir()) {
                 break;
             }
-            target = new Vec3(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+            Vec3 spot = new Vec3(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+            AABB box = new AABB(spot.x - r, spot.y, spot.z - r, spot.x + r, spot.y + h, spot.z + r);
+            if (level.noCollision(player, box)) {
+                target = spot;
+            }
         }
         if (target == null) {
             return;
@@ -95,7 +105,6 @@ public class BlinkPower implements Power {
             return;
         }
 
-        var level = RaceUtils.serverLevel(player);
         level.playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.0F, 1.0F);
         level.sendParticles(ParticleTypes.PORTAL, player.getX(), player.getY(0.5), player.getZ(),

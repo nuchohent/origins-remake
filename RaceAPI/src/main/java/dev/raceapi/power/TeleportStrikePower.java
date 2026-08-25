@@ -80,12 +80,18 @@ public class TeleportStrikePower implements Power {
             return;
         }
 
+        // find a free standing spot behind the target BEFORE burning the
+        // cooldown: if nothing fits the strike fails and stays retryable
+        Vec3 rawBehind = target.position().subtract(target.getLookAngle().scale(1.5));
+        Vec3 behind = new Vec3(rawBehind.x, Math.max(rawBehind.y, target.getY()), rawBehind.z);
+        Vec3 safe = findSafeSpot(level, player, behind);
+        if (safe == null) {
+            return;
+        }
+
         if (!PowerCooldowns.tryUse(player, id, cooldownTicks)) return;
 
-        // Teleport behind the target
-        Vec3 behind = target.position().subtract(target.getLookAngle().scale(1.5));
-        behind = new Vec3(behind.x, Math.max(behind.y, target.getY()), behind.z);
-        player.teleportTo(behind.x, behind.y, behind.z);
+        player.teleportTo(safe.x, safe.y, safe.z);
         player.fallDistance = 0;
 
         // Deal damage
@@ -98,5 +104,24 @@ public class TeleportStrikePower implements Power {
                 SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 0.8f, 1.2f);
 
         CooldownPayload.send(player, id.toString(), cooldownTicks, cooldownTicks);
+    }
+
+    private static Vec3 findSafeSpot(ServerLevel level, ServerPlayer player, Vec3 dest) {
+        double r = player.getBbWidth() / 2.0;
+        double h = player.getBbHeight();
+        Vec3[] probes = new Vec3[]{
+                dest,
+                dest.add(0, 1, 0),
+                dest.add(0, -1, 0),
+                dest.add(0, -2, 0),
+                dest.add(0, -3, 0)
+        };
+        for (Vec3 p : probes) {
+            AABB box = new AABB(p.x - r, p.y, p.z - r, p.x + r, p.y + h, p.z + r);
+            if (level.noCollision(player, box)) {
+                return p;
+            }
+        }
+        return null;
     }
 }

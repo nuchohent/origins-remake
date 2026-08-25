@@ -59,6 +59,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -163,6 +164,9 @@ public final class RaceAPI {
             return;
         }
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            if (player.isDeadOrDying()) {
+                continue;
+            }
             var race = RaceManager.getRace(player);
             if (race == null) {
                 continue;
@@ -270,12 +274,14 @@ public final class RaceAPI {
                 event.setCanceled(true);
                 return;
             }
-            float amount = event.getAmount();
-            for (Power power : activePowers(attacker)) {
-                try {
-                    power.onAttack(attacker, event.getEntity(), amount);
-                } catch (Exception e) {
-                    LOGGER.error("Power {} failed while dealing damage for player {}", power.getId(), attacker.getName().getString(), e);
+            if (event.getSource().is(DamageTypeTags.IS_PLAYER_ATTACK)) {
+                float amount = event.getAmount();
+                for (Power power : activePowers(attacker)) {
+                    try {
+                        power.onAttack(attacker, event.getEntity(), amount);
+                    } catch (Exception e) {
+                        LOGGER.error("Power {} failed while dealing damage for player {}", power.getId(), attacker.getName().getString(), e);
+                    }
                 }
             }
         }

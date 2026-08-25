@@ -18,7 +18,7 @@ public class DirectionalExposurePower implements Power {
     public DirectionalExposurePower(Identifier id, int difficulty, float multiplier, double rearAngle) {
         this.id = id;
         this.difficulty = difficulty;
-        this.multiplier = multiplier;
+        this.multiplier = Math.min(10.0f, Math.max(1.0f, multiplier));
         this.rearAngle = rearAngle;
     }
 

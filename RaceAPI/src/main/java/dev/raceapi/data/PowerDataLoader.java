@@ -40,7 +40,6 @@ public class PowerDataLoader extends SimplePreparableReloadListener<Map<Identifi
 
     @Override
     protected Map<Identifier, JsonElement> prepare(ResourceManager resourceManager, ProfilerFiller profiler) {
-        ParseErrors.clear();
         Map<Identifier, JsonElement> map = new HashMap<>();
         for (Map.Entry<Identifier, Resource> entry : CONVERTER.listMatchingResources(resourceManager).entrySet()) {
             Identifier id = CONVERTER.fileToId(entry.getKey());
@@ -57,6 +56,7 @@ public class PowerDataLoader extends SimplePreparableReloadListener<Map<Identifi
     @Override
     protected void apply(Map<Identifier, JsonElement> objects,
                          ResourceManager resourceManager, ProfilerFiller profiler) {
+        ParseErrors.clear();
                 PowerRegistry.clearJson();
         for (Map.Entry<Identifier, JsonElement> entry : objects.entrySet()) {
             Identifier id = entry.getKey();

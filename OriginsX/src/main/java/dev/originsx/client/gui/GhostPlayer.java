@@ -49,6 +49,9 @@ public class GhostPlayer extends AbstractClientPlayer {
     /** Builds a ghost from the current local player so the preview matches the player's look. */
     public static GhostPlayer ofLocal(ClientLevel level) {
         Player local = Minecraft.getInstance().player;
+        if (local == null) {
+            return null;
+        }
         if (local instanceof AbstractClientPlayer abstractClientPlayer) {
             return new GhostPlayer(level, local.getGameProfile(), abstractClientPlayer.getSkin());
         }

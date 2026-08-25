@@ -7,6 +7,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EntitySpawnReason;
 
@@ -27,7 +28,7 @@ public class SummonPower implements Power {
         this.difficulty = difficulty;
         this.cooldownTicks = cooldownTicks;
         this.entityTypeId = entityTypeId;
-        this.count = Math.max(1, count);
+        this.count = Math.min(Math.max(1, count), 16);
     }
 
     @Override
@@ -70,16 +71,31 @@ public class SummonPower implements Power {
         if (holder.isEmpty()) {
             return;
         }
-        if (!PowerCooldowns.tryUse(player, id, cooldownTicks)) {
+        if (PowerCooldowns.remaining(player, id, cooldownTicks) > 0) {
             return;
         }
         EntityType<?> entityType = holder.get().value();
         BlockPos center = player.blockPosition();
+        boolean spawnedAny = false;
         for (int i = 0; i < count; i++) {
             double offsetX = (level.getRandom().nextDouble() - 0.5) * 3.0;
             double offsetZ = (level.getRandom().nextDouble() - 0.5) * 3.0;
             BlockPos spawnPos = center.offset((int) Math.floor(offsetX), 0, (int) Math.floor(offsetZ));
-            entityType.spawn(level, spawnPos, EntitySpawnReason.MOB_SUMMONED);
+            Entity spawned = entityType.spawn(level, spawnPos, EntitySpawnReason.MOB_SUMMONED);
+            if (spawned == null) {
+                continue;
+            }
+            if (!level.noCollision(spawned, spawned.getBoundingBox())) {
+                spawned.setPos(center.getX() + 0.5, center.getY(), center.getZ() + 0.5);
+                if (!level.noCollision(spawned, spawned.getBoundingBox())) {
+                    spawned.discard();
+                    continue;
+                }
+            }
+            spawnedAny = true;
+        }
+        if (spawnedAny) {
+            PowerCooldowns.forceUse(player, id);
         }
     }
 }

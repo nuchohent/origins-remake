@@ -46,8 +46,10 @@ public class LifeTetherPower implements Power {
     }
 
     public void onNearbyPlayerDeath(ServerPlayer victim, ServerPlayer tether) {
-        double distance = victim.distanceTo(tether);
-        if (distance > range || victim == tether) {
+        if (victim == tether || victim.level() != tether.level()) {
+            return;
+        }
+        if (victim.distanceTo(tether) > range) {
             return;
         }
         float healthLoss = tether.getHealth() * healthLossFraction;

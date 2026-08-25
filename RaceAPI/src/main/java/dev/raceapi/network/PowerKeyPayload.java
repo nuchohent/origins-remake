@@ -51,21 +51,29 @@ public record PowerKeyPayload(int slot) implements CustomPacketPayload {
                     // a power that is still on cooldown would reject the press
                     // internally anyway — don't drain the resource pool for a
                     // guaranteed no-op
+                    Identifier trackedId = power.getWrapped().getId();
                     int cooldown = power.getCooldownTicks();
-                    if (cooldown > 0 && PowerCooldowns.remaining(player, power.getId(), cooldown) > 0) {
+                    if (cooldown > 0 && PowerCooldowns.remaining(player, trackedId, cooldown) > 0) {
                         return;
                     }
                     // resource (mana/stamina) cost: player-aware variant, so
                     // wrappers like ConditionalPower can suppress the cost of
                     // presses that are guaranteed to do nothing
+                    boolean continuing = PowerCooldowns.hasPendingUse(player, trackedId);
+                    long lastUseBefore = PowerCooldowns.lastUseTick(player, trackedId);
                     double cost = power.getResourceCost(player);
-                    if (cost > 0 && !dev.raceapi.player.Resources.tryConsume(player, cost)) {
+                    if (!continuing && cost > 0 && !dev.raceapi.player.Resources.tryConsume(player, cost)) {
                         player.sendOverlayMessage(
                                 net.minecraft.network.chat.Component.translatable(
                                         "raceapi.resource.insufficient"));
                         return;
                     }
                     power.onKeyPressed(player);
+                    if (!continuing && cost > 0 && cooldown > 0
+                            && PowerCooldowns.lastUseTick(player, trackedId) == lastUseBefore
+                            && !PowerCooldowns.hasPendingUse(player, trackedId)) {
+                        dev.raceapi.player.Resources.add(player, cost);
+                    }
                 }
             }
         });

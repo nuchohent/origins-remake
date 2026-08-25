@@ -143,10 +143,12 @@ public class LifeLinkPower implements Power {
         if (partner instanceof ServerPlayer p && p.isAlive() && HurtGuard.tryEnter()) {
             try {
                 float redirected = amount * redirectFraction;
-                p.hurt(level.damageSources().playerAttack(player), redirected);
-                level.sendParticles(ParticleTypes.DAMAGE_INDICATOR,
-                        p.getX(), p.getY() + 1, p.getZ(), 3, 0.3, 0.3, 0.3, 0.05);
-                return redirected;
+                if (p.hurtServer(level, level.damageSources().magic(), redirected)) {
+                    level.sendParticles(ParticleTypes.DAMAGE_INDICATOR,
+                            p.getX(), p.getY() + 1, p.getZ(), 3, 0.3, 0.3, 0.3, 0.05);
+                    return redirected;
+                }
+                return 0;
             } finally {
                 HurtGuard.exit();
             }

@@ -74,7 +74,7 @@ public final class PowerTypes {
         register("double_jump", (id, json, difficulty) -> new DoubleJumpPower(id, difficulty,
                 PowerFactory.getSeconds(json, "cooldown", 2), PowerFactory.getDouble(json, "boost", 0.7)));
         register("fire_aura", (id, json, difficulty) -> new FireAuraPower(id, difficulty,
-                PowerFactory.getDouble(json, "radius", 3.0), PowerFactory.getSeconds(json, "fire_ticks", 3)));
+                getDistance(json, "radius", 3.0), PowerFactory.getSeconds(json, "fire_ticks", 3)));
         register("step_height", (id, json, difficulty) -> new StepHeightPower(id, difficulty,
                 PowerFactory.getDouble(json, "amount", 1.0)));
         register("lifesteal", (id, json, difficulty) -> new LifestealPower(id, difficulty,
@@ -101,13 +101,13 @@ public final class PowerTypes {
                 PowerFactory.getDouble(json, "fraction", 0.25)));
         register("heavy_hitter", (id, json, difficulty) -> new HeavyHitterPower(id, difficulty));
         register("magnet", (id, json, difficulty) -> new MagnetPower(id, difficulty,
-                PowerFactory.getDouble(json, "radius", 4.0)));
+                getDistance(json, "radius", 4.0)));
         register("purified", (id, json, difficulty) -> new PurifiedPower(id, difficulty));
         register("detector", (id, json, difficulty) -> new DetectorPower(id, difficulty,
-                PowerFactory.getDouble(json, "radius", 6.0)));
+                getDistance(json, "radius", 6.0)));
         register("aqua_haste", (id, json, difficulty) -> new AquaHastePower(id, difficulty));
         register("frost_aura", (id, json, difficulty) -> new FrostAuraPower(id, difficulty,
-                PowerFactory.getDouble(json, "radius", 3.0),
+                getDistance(json, "radius", 3.0),
                 PowerFactory.getSeconds(json, "slowness_duration", 3),
                 PowerFactory.getInt(json, "slowness_amplifier", 0)));
         register("hyper_inertia", (id, json, difficulty) -> new HyperInertiaPower(id, difficulty,
@@ -131,7 +131,7 @@ public final class PowerTypes {
                 PowerFactory.getSeconds(json, "ability_disable_ticks", 5),
                 (float) PowerFactory.getDouble(json, "shock_damage", 2.0)));
         register("life_tether", (id, json, difficulty) -> new LifeTetherPower(id, difficulty,
-                PowerFactory.getDouble(json, "range", 15.0),
+                getDistance(json, "range", 15.0),
                 (float) PowerFactory.getDouble(json, "health_loss_fraction", 0.30),
                 PowerFactory.getSeconds(json, "slowness_duration", 3),
                 PowerFactory.getInt(json, "slowness_amplifier", 1)));
@@ -140,7 +140,7 @@ public final class PowerTypes {
         register("action_restriction", PowerTypes::actionRestriction);
         register("kinetic_slam", (id, json, difficulty) -> new KineticSlamPower(id, difficulty,
                 PowerFactory.getSeconds(json, "cooldown", 8),
-                PowerFactory.getDouble(json, "radius", 4.0),
+                getDistance(json, "radius", 4.0),
                 (float) PowerFactory.getDouble(json, "damage", 14.0),
                 (float) PowerFactory.getDouble(json, "self_damage_fraction", 0.25),
                 PowerFactory.getDouble(json, "knockback_strength", 1.5)));
@@ -149,7 +149,7 @@ public final class PowerTypes {
                 PowerFactory.getSeconds(json, "cooldown", 30)));
         register("phase_dash", (id, json, difficulty) -> new PhaseDashPower(id, difficulty,
                 PowerFactory.getSeconds(json, "cooldown", 3),
-                PowerFactory.getDouble(json, "distance", 6.0),
+                getDistance(json, "distance", 6.0),
                 PowerFactory.getDouble(json, "dash_velocity", 2.5),
                 (float) PowerFactory.getDouble(json, "contact_damage", 6.0)));
         register("kinetic_counter", (id, json, difficulty) -> new KineticCounterPower(id, difficulty,
@@ -160,37 +160,37 @@ public final class PowerTypes {
                 PowerFactory.getDouble(json, "pushback_strength", 2.0)));
         register("magnetic_hook", (id, json, difficulty) -> new MagneticHookPower(id, difficulty,
                 PowerFactory.getSeconds(json, "cooldown", 2),
-                PowerFactory.getDouble(json, "range", 16.0),
+                getDistance(json, "range", 16.0),
                 PowerFactory.getDouble(json, "pull_speed", 1.2),
                 (float) PowerFactory.getDouble(json, "pull_damage", 2.0)));
         register("life_link", (id, json, difficulty) -> new LifeLinkPower(id, difficulty,
                 PowerFactory.getSeconds(json, "cooldown", 4),
                 PowerFactory.getSeconds(json, "duration", 5),
                 (float) PowerFactory.getDouble(json, "redirect_fraction", 0.4),
-                PowerFactory.getInt(json, "pick_range", 10)));
+                getDistanceInt(json, "pick_range", 10)));
         register("gravity_pulse", (id, json, difficulty) -> new GravitationalPulsePower(id, difficulty,
-                PowerFactory.getDouble(json, "radius", 8.0),
+                getDistance(json, "radius", 8.0),
                 PowerFactory.getDouble(json, "force", 2.0),
                 PowerFactory.getSeconds(json, "cooldown", 4),
                 PowerFactory.getSeconds(json, "max_charge_ticks", 2),
                 (float) PowerFactory.getDouble(json, "damage", 2.0)));
         register("overdrive", (id, json, difficulty) -> new OverdrivePower(id, difficulty,
                 (float) PowerFactory.getDouble(json, "self_damage", 3.0),
-                PowerFactory.getDouble(json, "aura_radius", 1.5),
+                getDistance(json, "aura_radius", 1.5),
                 (float) PowerFactory.getDouble(json, "aura_damage", 2.0),
                 PowerFactory.getSeconds(json, "aura_fire_ticks", 0.1)));
         register("disarm_wave", (id, json, difficulty) -> new DisarmWavePower(id, difficulty,
-                PowerFactory.getDouble(json, "range", 8.0),
+                getDistance(json, "range", 8.0),
                 PowerFactory.getSeconds(json, "cooldown", 25),
                 (float) PowerFactory.getDouble(json, "hit_damage", 5.0),
                 PowerFactory.getDouble(json, "knockup_strength", 1.2)));
         register("teleport_strike", (id, json, difficulty) -> new TeleportStrikePower(id, difficulty,
                 PowerFactory.getSeconds(json, "cooldown", 8),
-                PowerFactory.getDouble(json, "range", 16.0),
+                getDistance(json, "range", 16.0),
                 (float) PowerFactory.getDouble(json, "damage", 6.0)));
         register("earthquake", (id, json, difficulty) -> new EarthquakePower(id, difficulty,
                 PowerFactory.getSeconds(json, "cooldown", 10),
-                PowerFactory.getDouble(json, "radius", 5.0),
+                getDistance(json, "radius", 5.0),
                 (float) PowerFactory.getDouble(json, "damage", 8.0),
                 (float) PowerFactory.getDouble(json, "self_damage", 2.0),
                 PowerFactory.getDouble(json, "knockup_strength", 0.8),
@@ -198,7 +198,7 @@ public final class PowerTypes {
                 PowerFactory.getInt(json, "slowness_amplifier", 0)));
         register("shadow_step", (id, json, difficulty) -> new ShadowStepPower(id, difficulty,
                 PowerFactory.getSeconds(json, "cooldown", 6),
-                PowerFactory.getDouble(json, "range", 12.0),
+                getDistance(json, "range", 12.0),
                 (float) PowerFactory.getDouble(json, "damage", 4.0),
                 PowerFactory.getSeconds(json, "darkness_duration", 0),
                 PowerFactory.getSeconds(json, "weakness_duration", 3)));
@@ -213,7 +213,7 @@ public final class PowerTypes {
                 PowerFactory.getString(json, "damage_type", "fire")));
         register("grant_item", (id, json, difficulty) -> {
             String itemId = PowerFactory.getString(json, "item", "minecraft:stone");
-            int count = PowerFactory.getInt(json, "count", 1);
+            int count = Math.max(1, Math.min(64, PowerFactory.getInt(json, "count", 1)));
             net.minecraft.resources.Identifier itemIdentifier = net.minecraft.resources.Identifier.tryParse(itemId);
             if (itemIdentifier == null) {
                 PowerFactory.LOGGER.error("Power {}: invalid item id '{}'", id, itemId);
@@ -275,20 +275,30 @@ public final class PowerTypes {
             }
 
             String action = PowerFactory.getString(json, "action", "effect");
+            switch (action) {
+                case "effect", "heal", "damage", "damage_target", "heal_target", "summon", "teleport" -> {
+                }
+                default -> {
+                    dev.raceapi.data.ParseErrors.error("Power " + id + ": unknown action '" + action + "'");
+                    return null;
+                }
+            }
             Identifier effectId = null;
             if (action.equals("effect")) {
                 String effectStr = PowerFactory.getString(json, "effect", "minecraft:speed");
                 effectId = Identifier.tryParse(effectStr);
-                if (effectId == null) {
-                    PowerFactory.LOGGER.error("Power {}: invalid effect id '{}'", id, effectStr);
+                if (effectId == null || net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.get(effectId).isEmpty()) {
+                    dev.raceapi.data.ParseErrors.error("Power " + id + ": unknown effect '" + effectStr + "' for action 'effect'");
+                    return null;
                 }
             }
             Identifier summonId = null;
             if (action.equals("summon")) {
                 String summonStr = PowerFactory.getString(json, "summon_entity", "minecraft:wolf");
                 summonId = Identifier.tryParse(summonStr);
-                if (summonId == null) {
-                    PowerFactory.LOGGER.error("Power {}: invalid summon_entity id '{}'", id, summonStr);
+                if (summonId == null || net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(summonId).isEmpty()) {
+                    dev.raceapi.data.ParseErrors.error("Power " + id + ": unknown summon_entity '" + summonStr + "' for action 'summon'");
+                    return null;
                 }
             }
 
@@ -371,5 +381,13 @@ public final class PowerTypes {
                 PowerFactory.getBool(json, "restrict_swim", false),
                 PowerFactory.getBool(json, "restrict_flight", false),
                 PowerFactory.getBool(json, "restrict_attack", false));
+    }
+
+    private static double getDistance(JsonObject json, String key, double fallback) {
+        return Math.min(64.0, PowerFactory.getDouble(json, key, fallback));
+    }
+
+    private static int getDistanceInt(JsonObject json, String key, int fallback) {
+        return Math.min(64, PowerFactory.getInt(json, key, fallback));
     }
 }

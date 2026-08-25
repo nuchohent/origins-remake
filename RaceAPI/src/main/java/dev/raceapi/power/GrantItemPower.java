@@ -60,7 +60,8 @@ public class GrantItemPower implements Power {
             return;
         }
         flags.mark(player.getUUID(), id.toString());
-        ItemStack stack = new ItemStack(holder.get().value(), count);
+        int clampedCount = Math.min(count, Math.max(1, holder.get().value().getDefaultMaxStackSize()));
+        ItemStack stack = new ItemStack(holder.get().value(), clampedCount);
         if (!player.getInventory().add(stack)) {
             player.drop(stack, false);
         }

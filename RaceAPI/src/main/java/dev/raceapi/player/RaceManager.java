@@ -51,14 +51,16 @@ public final class RaceManager {
             return;
         }
         if (oldRace != null) {
-            // starting items may be granted again if the player picks the race
-            // back up - "once" means once per race SELECTION; respawn/relog
-            // re-attach must NOT reset the flags (they go through
-            // removeRacePowers too, hence the reset here and not there)
-            for (Power power : PowerPipeline.effective(player, oldRace)) {
-                if (power.getWrapped() instanceof dev.raceapi.power.GrantItemPower grant) {
-                    dev.raceapi.data.GrantFlagsData.get(dev.raceapi.util.RaceUtils.serverLevel(player))
-                            .unmark(player.getUUID(), grant.getId().toString());
+            // grant flags reset ONLY on an explicit switch to another race
+            // ("once" = once per race SELECTION); clearing to null keeps the
+            // flags so start items cannot be farmed by select/clear/select,
+            // and respawn/relog re-attach never reaches this branch anyway
+            if (newRace != null) {
+                for (Power power : PowerPipeline.effective(player, oldRace)) {
+                    if (power.getWrapped() instanceof dev.raceapi.power.GrantItemPower grant) {
+                        dev.raceapi.data.GrantFlagsData.get(dev.raceapi.util.RaceUtils.serverLevel(player))
+                                .unmark(player.getUUID(), grant.getId().toString());
+                    }
                 }
             }
             removeRacePowers(player, oldRace);
@@ -77,9 +79,20 @@ public final class RaceManager {
 
     /** Applies the persisted race (e.g. after login). */
     public static void applyPersistedRace(ServerPlayer player) {
+        applyPersistedRace(player, true);
+    }
+
+    /**
+     * Applies the persisted race. Pass {@code syncRegistry=false} when the race
+     * registry cannot have changed (e.g. a skill-tree node unlock re-attach):
+     * skips the full registry sync and only re-attaches powers.
+     */
+    public static void applyPersistedRace(ServerPlayer player, boolean syncRegistry) {
         // dedicated servers: the client needs every race definition for its
         // selection screen — sync before the selected-race payload
-        dev.raceapi.network.SyncRacesPayload.sendTo(player);
+        if (syncRegistry) {
+            dev.raceapi.network.SyncRacesPayload.sendTo(player);
+        }
         // Clear any leftover effects from a previous session before re-applying
         clearAllRaceEffects(player);
         String saved = RaceSavedData.get(RaceUtils.serverLevel(player)).get(player.getUUID());
@@ -111,6 +124,7 @@ public final class RaceManager {
             if (attached != null) {
                 removeRacePowers(player, attached);
             }
+            RaceSavedData.get(RaceUtils.serverLevel(player)).set(player.getUUID(), "");
             ATTACHED_RACES.remove(player.getUUID());
             SyncRacePayload.send(player, null);
             return;
@@ -157,9 +171,7 @@ public final class RaceManager {
         for (Power power : PowerPipeline.effective(player, race)) {
             if (power.hasBinding() && power.getCooldownTicks() > 0) {
                 int remaining = power.getRemainingCooldownTicks(player);
-                if (remaining > 0) {
-                    CooldownPayload.send(player, power.getId().toString(), power.getCooldownTicks(), remaining);
-                }
+                CooldownPayload.send(player, power.getId().toString(), power.getCooldownTicks(), remaining);
             }
         }
     }
@@ -170,10 +182,30 @@ public final class RaceManager {
         for (Power power : PowerPipeline.effective(player, race)) {
             power.onRemove(player);
         }
+        sweepRaceModifiers(player);
         // NOTE: the resource pool is intentionally NOT reset here — this path
         // also runs on logout/respawn/reload re-attach, and the pool should
         // survive those. RaceManager.setRace clears it on an actual race change.
         dev.raceapi.player.Resources.sync(player);
+    }
+
+    /**
+     * Removes every {@code raceapi} attribute modifier, including orphans left
+     * by power clones no longer present in the effective list on detach.
+     */
+    private static void sweepRaceModifiers(ServerPlayer player) {
+        net.minecraft.core.registries.BuiltInRegistries.ATTRIBUTE.listElements()
+                .forEach(holder -> {
+                    var inst = player.getAttribute(holder);
+                    if (inst != null) {
+                        for (net.minecraft.world.entity.ai.attributes.AttributeModifier mod
+                                : java.util.List.copyOf(inst.getModifiers())) {
+                            if (mod.id().getNamespace().equals("raceapi")) {
+                                inst.removeModifier(mod.id());
+                            }
+                        }
+                    }
+                });
     }
 
     /**
@@ -221,18 +253,7 @@ public final class RaceManager {
 
         // Sweep every attribute modifier this mod could ever have applied,
         // regardless of which power instance (original or tree clone) made it
-        net.minecraft.core.registries.BuiltInRegistries.ATTRIBUTE.listElements()
-                .forEach(holder -> {
-                    var inst = player.getAttribute(holder);
-                    if (inst != null) {
-                        for (net.minecraft.world.entity.ai.attributes.AttributeModifier mod
-                                : java.util.List.copyOf(inst.getModifiers())) {
-                            if (mod.id().getNamespace().equals("raceapi")) {
-                                inst.removeModifier(mod.id());
-                            }
-                        }
-                    }
-                });
+        sweepRaceModifiers(player);
 
         // Reset abilities (flight)
         if (player.getAbilities().mayfly && !player.isCreative()

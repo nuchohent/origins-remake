@@ -18,7 +18,7 @@ public class AirborneFragilityPower implements Power {
     public AirborneFragilityPower(Identifier id, int difficulty, double damageMultiplier, int jumpDisableTicks) {
         this.id = id;
         this.difficulty = difficulty;
-        this.damageMultiplier = damageMultiplier;
+        this.damageMultiplier = Math.min(10.0, Math.max(1.0, damageMultiplier));
         this.jumpDisableTicks = jumpDisableTicks;
     }
 

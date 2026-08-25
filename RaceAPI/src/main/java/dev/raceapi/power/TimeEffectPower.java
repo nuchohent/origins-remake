@@ -2,6 +2,8 @@ package dev.raceapi.power;
 
 import dev.raceapi.race.Power;
 import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
@@ -51,20 +53,38 @@ public class TimeEffectPower implements Power {
 
     @Override
     public void onRemove(ServerPlayer player) {
-        if (player.hasEffect(effect)) {
-            player.removeEffect(effect);
-        }
+        removeGranted(player);
     }
 
     @Override
     public void onTick(ServerPlayer player) {
-        boolean active = night ? player.level().getOverworldClockTime() % 24000 >= 12000 : player.level().getOverworldClockTime() % 24000 < 12000;
+        long clock = Math.floorMod(player.level().getOverworldClockTime(), 24000L);
+        boolean active = night ? clock >= 12000 : clock < 12000;
         if (active) {
             if (!player.hasEffect(effect)) {
                 player.addEffect(new MobEffectInstance(effect, MobEffectInstance.INFINITE_DURATION, amplifier, false, false, true));
+                player.getPersistentData().putInt(stateKey(), amplifier);
             }
         } else if (player.hasEffect(effect)) {
+            removeGranted(player);
+        }
+    }
+
+    private void removeGranted(ServerPlayer player) {
+        CompoundTag data = player.getPersistentData();
+        String key = stateKey();
+        if (!data.contains(key)) {
+            return;
+        }
+        int grantedAmplifier = data.getIntOr(key, amplifier);
+        data.remove(key);
+        MobEffectInstance current = player.getEffect(effect);
+        if (current != null && current.getAmplifier() == grantedAmplifier && current.isInfiniteDuration()) {
             player.removeEffect(effect);
         }
+    }
+
+    private String stateKey() {
+        return "raceapi_eff_" + id + "_" + BuiltInRegistries.MOB_EFFECT.getKey(effect.value());
     }
 }

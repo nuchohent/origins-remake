@@ -102,7 +102,9 @@ public class OnInteractPower implements Power {
         if (!checkCooldown(player)) {
             return;
         }
-        performAction(player, null, pos);
+        if (performAction(player, null, pos)) {
+            markCooldown(player);
+        }
     }
 
     @Override
@@ -113,7 +115,9 @@ public class OnInteractPower implements Power {
         if (!checkCooldown(player)) {
             return;
         }
-        performAction(player, target, null);
+        if (performAction(player, target, null)) {
+            markCooldown(player);
+        }
     }
 
     private boolean matchesTrigger(ServerPlayer player, InteractionHand hand, boolean isEntity, Entity target) {
@@ -175,58 +179,80 @@ public class OnInteractPower implements Power {
         long now = player.level().getGameTime();
         PlayerKey key = new PlayerKey(player.getUUID());
         Long lastUse = cooldownMap.get(key);
-        if (lastUse != null && now - lastUse < cooldownTicks) {
-            return false;
-        }
-        cooldownMap.put(key, now);
-        return true;
+        return lastUse == null || now - lastUse >= cooldownTicks;
     }
 
-    private void performAction(ServerPlayer player, Entity target, BlockPos blockPos) {
+    private void markCooldown(ServerPlayer player) {
+        if (cooldownTicks <= 0) {
+            return;
+        }
+        cooldownMap.put(new PlayerKey(player.getUUID()), player.level().getGameTime());
+    }
+
+    private boolean performAction(ServerPlayer player, Entity target, BlockPos blockPos) {
         switch (action) {
-            case "effect" -> applyEffect(player);
+            case "effect" -> {
+                return applyEffect(player);
+            }
             case "heal" -> {
                 if (healAmount > 0) {
                     player.heal(healAmount);
+                    return true;
                 }
+                return false;
             }
             case "damage" -> {
                 if (damageAmount > 0) {
                     player.hurt(player.damageSources().magic(), damageAmount);
+                    return true;
                 }
+                return false;
             }
             case "damage_target" -> {
                 if (damageAmount > 0 && target instanceof LivingEntity living) {
                     living.hurt(living.damageSources().magic(), damageAmount);
+                    return true;
                 }
+                return false;
             }
             case "heal_target" -> {
                 if (healAmount > 0 && target instanceof LivingEntity living) {
                     living.heal(healAmount);
+                    return true;
                 }
+                return false;
             }
-            case "summon" -> performSummon(player);
-            case "teleport" -> performTeleport(player, target, blockPos);
+            case "summon" -> {
+                return performSummon(player);
+            }
+            case "teleport" -> {
+                return performTeleport(player, target, blockPos);
+            }
+            default -> {
+                return false;
+            }
         }
     }
 
-    private void applyEffect(ServerPlayer player) {
+    private boolean applyEffect(ServerPlayer player) {
         if (effectId != null) {
             var holder = BuiltInRegistries.MOB_EFFECT.get(effectId);
             if (holder.isPresent()) {
                 player.addEffect(new MobEffectInstance(
                         holder.get(), effectDuration * 20, effectAmplifier));
+                return true;
             }
         }
+        return false;
     }
 
-    private void performSummon(ServerPlayer player) {
+    private boolean performSummon(ServerPlayer player) {
         if (summonEntity == null || player.level() == null) {
-            return;
+            return false;
         }
         var holder = BuiltInRegistries.ENTITY_TYPE.get(summonEntity);
         if (holder.isEmpty()) {
-            return;
+            return false;
         }
         EntityType<?> entityType = holder.get().value();
         for (int i = 0; i < summonCount; i++) {
@@ -236,14 +262,19 @@ public class OnInteractPower implements Power {
             entityType.spawn((net.minecraft.server.level.ServerLevel) player.level(),
                     spawnPos, EntitySpawnReason.MOB_SUMMONED);
         }
+        return true;
     }
 
-    private void performTeleport(ServerPlayer player, Entity target, BlockPos blockPos) {
+    private boolean performTeleport(ServerPlayer player, Entity target, BlockPos blockPos) {
         if (blockPos != null) {
             player.teleportTo(blockPos.getX() + 0.5, blockPos.getY() + 1.0, blockPos.getZ() + 0.5);
-        } else if (target != null) {
-            player.teleportTo(target.getX(), target.getY(), target.getZ());
+            return true;
         }
+        if (target != null) {
+            player.teleportTo(target.getX(), target.getY(), target.getZ());
+            return true;
+        }
+        return false;
     }
 
     private record PlayerKey(java.util.UUID uuid) {

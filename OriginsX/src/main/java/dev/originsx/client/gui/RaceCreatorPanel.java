@@ -118,6 +118,8 @@ public final class RaceCreatorPanel {
     private TextArea descriptionArea;
     private Path editPackDir;
     private Identifier editingOriginalId;
+    @Nullable
+    private JsonObject editingOriginalJson;
     private boolean editing;
     private Button addButton;
     private int editingPowerIndex = -1;
@@ -1470,7 +1472,7 @@ public final class RaceCreatorPanel {
             name.textStyle(s -> s.fontSize(9).textColor(finalColor));
             final int index = i;
             row.addChild(name);
-            if (power.reference == null) {
+            if (power.reference == null && power.rawJson == null) {
                 var edit = new Button();
                 edit.layout(l -> l.width(34).height(16));
                 edit.setText("originsx.creator.edit");
@@ -1712,13 +1714,15 @@ public final class RaceCreatorPanel {
             }
         }
 
-        JsonObject root = new JsonObject();
+        JsonObject root = editingOriginalJson != null ? editingOriginalJson.deepCopy() : new JsonObject();
         // If no display name was entered, fall back to the datapack name so the
         // race doesn't show an ugly id tag in the list.
         String display = !name.isEmpty() ? name : draft.datapackName.trim();
         root.addProperty("display_name", display.isEmpty() ? path : display);
         if (!draft.description.trim().isEmpty()) {
             root.addProperty("description", draft.description.trim());
+        } else {
+            root.remove("description");
         }
         root.addProperty("icon", draft.icon.trim().isEmpty() ? "minecraft:feather" : draft.icon.trim());
         root.addProperty("difficulty", parseInt(draft.difficulty, 0));
@@ -1762,8 +1766,22 @@ public final class RaceCreatorPanel {
             Path dataDir = packDir.resolve("data");
             String json = buildJson();
             Identifier id = raceId();
-            Path raceFile = dataDir.resolve(id.getNamespace()).resolve("raceapi/races")
-                    .resolve(id.getPath() + ".json");
+            Path racesDir = dataDir.resolve(id.getNamespace()).resolve("raceapi/races");
+            if ((editingOriginalId == null || !editingOriginalId.equals(id))
+                    && Files.exists(racesDir.resolve(id.getPath() + ".json"))) {
+                String basePath = id.getPath();
+                int suffix = 2;
+                while (Files.exists(racesDir.resolve(basePath + "_" + suffix + ".json"))) {
+                    suffix++;
+                }
+                id = Identifier.fromNamespaceAndPath(id.getNamespace(), basePath + "_" + suffix);
+                draft.id = id.toString();
+                if (idField != null) {
+                    idField.setText(draft.id);
+                }
+                message(Component.translatable("originsx.creator.save.id.taken", id.toString()));
+            }
+            Path raceFile = racesDir.resolve(id.getPath() + ".json");
             Files.createDirectories(raceFile.getParent());
             Files.writeString(raceFile, json, StandardCharsets.UTF_8);
 
@@ -1837,6 +1855,7 @@ public final class RaceCreatorPanel {
         editing = true;
         editPackDir = packDir;
         editingOriginalId = Identifier.tryParse(id);
+        editingOriginalJson = root.deepCopy();
         generatedDefaultPath = null;
 
         draft.name = stringOr(root, "display_name", "");
@@ -1865,6 +1884,13 @@ public final class RaceCreatorPanel {
                     type = type.substring("raceapi:".length());
                 }
                 PowerDraft power = new PowerDraft(type);
+                if (PowerTypeSpec.byTypeOrNull(type) == null) {
+                    // unknown (another mod's) power type: keep the raw JSON so
+                    // it exports untouched instead of degrading into attribute
+                    power.rawJson = powerJson.deepCopy();
+                    powers.add(power);
+                    continue;
+                }
                 power.name = stringOr(powerJson, "display_name", "");
                 power.description = stringOr(powerJson, "description", "");
                 for (ParamSpec param : PowerTypeSpec.byType(type).params) {
@@ -1875,6 +1901,11 @@ public final class RaceCreatorPanel {
                     }
                 }
                 if (type.equals("conditional")) {
+                    for (String key : conditionParamKeys(stringOr(powerJson, "condition_type", ""))) {
+                        if (powerJson.has(key) && powerJson.get(key).isJsonPrimitive()) {
+                            power.values.put(key, powerJson.get(key).getAsString());
+                        }
+                    }
                     loadConditionals(powerJson, power);
                 }
                 if (powerJson.has("difficulty")) {
@@ -1895,18 +1926,22 @@ public final class RaceCreatorPanel {
                     PowerDraft nested = new PowerDraft(innerType);
                     nested.name = stringOr(inner, "display_name", "");
                     nested.description = stringOr(inner, "description", "");
-                    for (ParamSpec param : PowerTypeSpec.byType(innerType).params) {
-                        if (inner.has(param.key)) {
-                            com.google.gson.JsonElement value = inner.get(param.key);
-                            nested.values.put(param.key, value.isJsonPrimitive()
-                                    ? value.getAsString() : value.toString());
+                    if (PowerTypeSpec.byTypeOrNull(innerType) == null) {
+                        nested.rawJson = inner.deepCopy();
+                    } else {
+                        for (ParamSpec param : PowerTypeSpec.byType(innerType).params) {
+                            if (inner.has(param.key)) {
+                                com.google.gson.JsonElement value = inner.get(param.key);
+                                nested.values.put(param.key, value.isJsonPrimitive()
+                                        ? value.getAsString() : value.toString());
+                            }
                         }
-                    }
-                    if (inner.has("difficulty")) {
-                        nested.values.put("difficulty", inner.get("difficulty").getAsString());
-                    }
-                    if (inner.has("bind_slot")) {
-                        nested.values.put("bind_slot", inner.get("bind_slot").getAsString());
+                        if (inner.has("difficulty")) {
+                            nested.values.put("difficulty", inner.get("difficulty").getAsString());
+                        }
+                        if (inner.has("bind_slot")) {
+                            nested.values.put("bind_slot", inner.get("bind_slot").getAsString());
+                        }
                     }
                     power.nested = nested;
                 }
@@ -1935,6 +1970,7 @@ public final class RaceCreatorPanel {
         editing = false;
         editPackDir = null;
         editingOriginalId = null;
+        editingOriginalJson = null;
         generatedDefaultPath = null;
 
         draft.name = "";
@@ -1968,6 +2004,29 @@ public final class RaceCreatorPanel {
     }
 
     /**
+     * The parameter keys a given condition type reads from JSON (mirrors the
+     * rows built by {@link #addConditionParamRows}). Parameterless conditions
+     * return an empty list.
+     */
+    private static List<String> conditionParamKeys(String type) {
+        return switch (type) {
+            case "has_effect" -> List.of("effect");
+            case "in_biome" -> List.of("tag");
+            case "in_dimension" -> List.of("dimension");
+            case "entities_nearby_above", "entities_nearby_below" -> List.of("threshold", "radius");
+            case "held_item", "offhand_item", "wearing_item" -> List.of("slot", "item", "item_tag");
+            case "standing_on" -> List.of("block", "block_tag");
+            case "biome_id" -> List.of("biome");
+            case "moon_phase" -> List.of("phase");
+            case "time_between" -> List.of("min", "max");
+            case "gamemode" -> List.of("mode");
+            case "riding" -> List.of("entity");
+            case "scoreboard_above", "scoreboard_below" -> List.of("objective", "threshold");
+            default -> List.of();
+        };
+    }
+
+    /**
      * Restores composite conditions ("conditions" array / "inner" object)
      * into flat "subN_" form values so the editor can re-edit them.
      */
@@ -1991,8 +2050,9 @@ public final class RaceCreatorPanel {
 
     private static void loadSubCondition(JsonObject sub, PowerDraft power, int index) {
         String prefix = "sub" + index + "_";
-        power.values.put(prefix + "type", stringOr(sub, "condition_type", "in_water"));
-        for (String key : new String[]{"threshold", "effect", "tag", "dimension"}) {
+        String type = stringOr(sub, "condition_type", "in_water");
+        power.values.put(prefix + "type", type);
+        for (String key : conditionParamKeys(type)) {
             if (sub.has(key) && sub.get(key).isJsonPrimitive()) {
                 power.values.put(prefix + key, sub.get(key).getAsString());
             }
@@ -2129,6 +2189,7 @@ public final class RaceCreatorPanel {
         copy.name = source.name;
         copy.description = source.description;
         copy.reference = source.reference;
+        copy.rawJson = source.rawJson;
         copy.values.putAll(source.values);
         copy.nested = copyDraft(source.nested);
         return copy;
@@ -2152,6 +2213,8 @@ public final class RaceCreatorPanel {
         private String description = "";
         @Nullable
         private String reference;
+        @Nullable
+        private JsonObject rawJson;
         private final Map<String, String> values = new HashMap<>();
         @Nullable
         private PowerDraft nested;
@@ -2172,21 +2235,18 @@ public final class RaceCreatorPanel {
             }
             JsonObject sub = new JsonObject();
             sub.addProperty("condition_type", subType);
-            String threshold = values.get(prefix + "threshold");
-            if (threshold != null && !threshold.isEmpty()) {
-                addTyped(sub, "threshold", threshold, Kind.DOUBLE);
-            }
-            String effect = values.get(prefix + "effect");
-            if (effect != null && !effect.isEmpty()) {
-                sub.addProperty("effect", effect);
-            }
-            String tag = values.get(prefix + "tag");
-            if (tag != null && !tag.isEmpty()) {
-                sub.addProperty("tag", tag);
-            }
-            String dimension = values.get(prefix + "dimension");
-            if (dimension != null && !dimension.isEmpty()) {
-                sub.addProperty("dimension", dimension);
+            for (String key : conditionParamKeys(subType)) {
+                String value = values.get(prefix + key);
+                if (value == null || value.isEmpty()) {
+                    continue;
+                }
+                if ("threshold".equals(key) || "radius".equals(key)) {
+                    addTyped(sub, key, value, Kind.DOUBLE);
+                } else if ("min".equals(key) || "max".equals(key)) {
+                    addTyped(sub, key, value, Kind.INT);
+                } else {
+                    sub.addProperty(key, value);
+                }
             }
             return sub;
         }
@@ -2194,6 +2254,9 @@ public final class RaceCreatorPanel {
         private JsonElement toJson() {
             if (reference != null) {
                 return new JsonPrimitive(reference);
+            }
+            if (rawJson != null) {
+                return rawJson.deepCopy();
             }
             JsonObject obj = new JsonObject();
             obj.addProperty("type", "raceapi:" + type);
@@ -2641,12 +2704,17 @@ public final class RaceCreatorPanel {
         }
 
         private static PowerTypeSpec byType(String type) {
+            PowerTypeSpec spec = byTypeOrNull(type);
+            return spec != null ? spec : ATTRIBUTE;
+        }
+
+        private static @Nullable PowerTypeSpec byTypeOrNull(String type) {
             for (PowerTypeSpec spec : values()) {
                 if (spec.type.equals(type)) {
                     return spec;
                 }
             }
-            return ATTRIBUTE;
+            return null;
         }
     }
 }

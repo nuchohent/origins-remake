@@ -36,6 +36,7 @@ import java.util.zip.GZIPOutputStream;
 public record SyncRacesPayload(String data) implements CustomPacketPayload {
 
     private static final int MAX_DATA_LENGTH = 900_000;
+    private static final int MAX_DECOMPRESSED_LENGTH = 4 * 1024 * 1024;
 
     public static final Type<SyncRacesPayload> TYPE = new Type<>(
             Identifier.fromNamespaceAndPath("raceapi", "sync_races"));
@@ -113,9 +114,18 @@ public record SyncRacesPayload(String data) implements CustomPacketPayload {
 
     private static String decompress(String data) throws IOException {
         ByteArrayInputStream bytes = new ByteArrayInputStream(Base64.getDecoder().decode(data));
+        ByteArrayOutputStream jsonBytes = new ByteArrayOutputStream();
         try (GZIPInputStream gzip = new GZIPInputStream(bytes)) {
-            return new String(gzip.readAllBytes(), StandardCharsets.UTF_8);
+            byte[] buffer = new byte[4096];
+            int read;
+            while ((read = gzip.read(buffer)) >= 0) {
+                jsonBytes.write(buffer, 0, read);
+                if (jsonBytes.size() > MAX_DECOMPRESSED_LENGTH) {
+                    throw new IOException("Race sync payload too big when decompressed");
+                }
+            }
         }
+        return jsonBytes.toString(StandardCharsets.UTF_8);
     }
 
     @Override

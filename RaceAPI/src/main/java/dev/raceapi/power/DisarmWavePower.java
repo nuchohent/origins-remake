@@ -70,6 +70,13 @@ public class DisarmWavePower implements Power {
 
             for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, searchBox,
                     e -> e != player && e.isAlive())) {
+                if (level.clip(new net.minecraft.world.level.ClipContext(player.getEyePosition(),
+                        target.position().add(0, target.getBbHeight() / 2, 0),
+                        net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                        net.minecraft.world.level.ClipContext.Fluid.NONE, player)
+                ).getType() == net.minecraft.world.phys.HitResult.Type.BLOCK) {
+                    continue;
+                }
                 target.push(0, knockupStrength, 0);
                 target.hurtMarked = true;
                 target.hurt(level.damageSources().playerAttack(player), hitDamage);

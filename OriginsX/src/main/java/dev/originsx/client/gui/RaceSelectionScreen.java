@@ -162,7 +162,7 @@ public final class RaceSelectionScreen {
     }
 
     private static UIElement randomRaceCard(RaceListHolder holder) {
-        boolean highlighted = holder.current == null;
+        boolean highlighted = holder.randomSelected;
         var card = new UIElement()
                 .layout(l -> l.widthPercent(100).height(46).flexDirection(FlexDirection.ROW).gapAll(8).paddingAll(6)
                         .alignItems(AlignItems.CENTER))
@@ -177,6 +177,7 @@ public final class RaceSelectionScreen {
                 List<Race> playable = new ArrayList<>(RaceRegistry.playable());
                 if (playable.isEmpty()) return;
                 Race random = playable.get(RANDOM.nextInt(playable.size()));
+                holder.randomSelected = true;
                 holder.select(random);
             }
         });
@@ -207,6 +208,7 @@ public final class RaceSelectionScreen {
                 raceCardText(race));
         card.addEventListener(UIEvents.MOUSE_DOWN, e -> {
             if (e.button == 0) {
+                holder.randomSelected = false;
                 holder.select(race);
             }
         });
@@ -512,7 +514,11 @@ public final class RaceSelectionScreen {
             } catch (IllegalArgumentException bad) {
                 message(Component.translatable(bad.getMessage()).withStyle(ChatFormatting.RED));
             } catch (IOException io) {
-                message(Component.translatable("originsx.share.need_singleplayer").withStyle(ChatFormatting.RED));
+                if (Minecraft.getInstance().getSingleplayerServer() == null) {
+                    message(Component.translatable("originsx.share.need_singleplayer").withStyle(ChatFormatting.RED));
+                } else {
+                    message(Component.translatable("originsx.share.failed_io").withStyle(ChatFormatting.RED));
+                }
             }
         });
         cancelBtn.setOnClick(e -> Minecraft.getInstance().setScreenAndShow(create()));
@@ -643,6 +649,7 @@ public final class RaceSelectionScreen {
         private UIElement wrapper;
         private ScrollerView scroller;
         private Race current;
+        private boolean randomSelected;
         private String searchFilter;
         private java.util.function.Consumer<Race> onSelect;
 

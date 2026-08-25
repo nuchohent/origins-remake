@@ -123,6 +123,8 @@ public final class OriginsXClient {
 
     private static int autoOpenRetries = 0;
 
+    private static boolean autoOpenScheduled = false;
+
     private OriginsXClient() {
     }
 
@@ -390,7 +392,8 @@ public final class OriginsXClient {
             // this JVM). Dedicated servers need the client-side hook below.
             autoOpenRetries = 0;
             Minecraft mc = Minecraft.getInstance();
-            if (mc != null) {
+            if (mc != null && !autoOpenScheduled) {
+                autoOpenScheduled = true;
                 mc.execute(OriginsXClient::tryAutoOpen);
             }
         }
@@ -401,13 +404,17 @@ public final class OriginsXClient {
             // server PlayerLoggedInEvent never reaches this JVM
             autoOpenRetries = 0;
             Minecraft mc = Minecraft.getInstance();
-            mc.execute(OriginsXClient::tryAutoOpen);
+            if (!autoOpenScheduled) {
+                autoOpenScheduled = true;
+                mc.execute(OriginsXClient::tryAutoOpen);
+            }
         }
 
         @SubscribeEvent
         public static void onClientLoggingOut(net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent.LoggingOut event) {
             SelectedRaceClient.reset();
             dev.raceapi.client.ResourceClient.reset();
+            autoOpenScheduled = false;
         }
 
         /**

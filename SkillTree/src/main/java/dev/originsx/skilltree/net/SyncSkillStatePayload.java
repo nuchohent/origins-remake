@@ -21,6 +21,8 @@ import net.neoforged.neoforge.network.PacketDistributor;
  */
 public record SyncSkillStatePayload(String raceId, String treeJson, String tiersData) implements CustomPacketPayload {
 
+    private static final int MAX_TREE_JSON_LENGTH = 800_000;
+
     public static final Type<SyncSkillStatePayload> TYPE = new Type<>(
             Identifier.fromNamespaceAndPath(SkillTreeMod.MOD_ID, "sync_state"));
 
@@ -36,6 +38,12 @@ public record SyncSkillStatePayload(String raceId, String treeJson, String tiers
         SkillTree tree = race == null ? null : TreeManager.treeFor(race.getId());
         String raceId = race == null ? "" : race.getId().toString();
         String treeJson = tree == null ? "" : tree.raw();
+        if (treeJson.length() > MAX_TREE_JSON_LENGTH) {
+            dev.raceapi.data.ParseErrors.error(
+                    "Skill tree state for " + raceId + " too large to sync (" + treeJson.length()
+                            + " chars) — sending an empty tree");
+            treeJson = "";
+        }
         StringBuilder tiers = new StringBuilder();
         if (tree != null) {
             var progress = ProgressData.get(player.level()).tiersFor(player.getUUID());
