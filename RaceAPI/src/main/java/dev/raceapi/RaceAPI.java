@@ -132,7 +132,13 @@ public final class RaceAPI {
                                          net.minecraft.util.profiling.ProfilerFiller profiler) {
                         var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
                         if (server != null) {
-                            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                            // registry sync must reach every player before their
+                            // selected-race payload (same ordering as login)
+                            var players = server.getPlayerList().getPlayers();
+                            for (ServerPlayer player : players) {
+                                dev.raceapi.network.SyncRacesPayload.sendTo(player);
+                            }
+                            for (ServerPlayer player : players) {
                                 RaceManager.reapplyAfterReload(player);
                             }
                         }
