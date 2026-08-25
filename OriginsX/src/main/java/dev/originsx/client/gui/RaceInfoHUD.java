@@ -165,14 +165,15 @@ public final class RaceInfoHUD {
     }
 
     private static UIElement passivePowerRow(Power power) {
-        // balance convention: negative difficulty = buff, positive = weakness
-        int difficulty = power.getDifficulty();
+        // same character heuristic as the creator's power picker / balance
+        // meter: type weight plus manual difficulty; negative = buff
+        int score = RaceCreatorPanel.powerTypeWeight(power.getId().getPath()) + power.getDifficulty();
         Component prefix;
         int nameColor;
-        if (difficulty < 0) {
+        if (score < 0) {
             prefix = Component.literal("+ ").withStyle(ChatFormatting.GREEN);
             nameColor = 0xFF55FF55;
-        } else if (difficulty > 0) {
+        } else if (score > 0) {
             prefix = Component.literal("- ").withStyle(ChatFormatting.RED);
             nameColor = 0xFFFF5555;
         } else {

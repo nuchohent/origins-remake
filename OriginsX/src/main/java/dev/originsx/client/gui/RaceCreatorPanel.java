@@ -1579,6 +1579,11 @@ public final class RaceCreatorPanel {
             Map.entry("action_restriction", 2), Map.entry("directional_exposure", 1),
             Map.entry("hyper_inertia", 1), Map.entry("density_anchor", 1));
 
+    /** Heuristic character of a power type: negative = buff, positive = weakness. */
+    static int powerTypeWeight(String type) {
+        return POWER_TYPE_WEIGHTS.getOrDefault(type, 0);
+    }
+
     private UIElement buildBalanceMeter() {
         var row = new UIElement().layout(l -> l.widthPercent(100).flexDirection(FlexDirection.ROW)
                 .gapAll(6).alignItems(AlignItems.CENTER));
