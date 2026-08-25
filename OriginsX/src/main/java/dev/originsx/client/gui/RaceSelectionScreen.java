@@ -628,7 +628,7 @@ public final class RaceSelectionScreen {
     private static UIElement passivePowerRow(Power power) {
         // same character heuristic as the creator picker / balance meter:
         // type weight plus manual difficulty; negative = buff
-        int score = RaceCreatorPanel.powerTypeWeight(power.getId().getPath()) + power.getDifficulty();
+        int score = RaceCreatorPanel.powerWeight(power) + power.getDifficulty();
         Component prefix;
         int nameColor;
         if (score < 0) {

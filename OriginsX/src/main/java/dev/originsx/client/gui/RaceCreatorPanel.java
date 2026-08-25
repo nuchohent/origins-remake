@@ -1584,6 +1584,30 @@ public final class RaceCreatorPanel {
         return POWER_TYPE_WEIGHTS.getOrDefault(type, 0);
     }
 
+    /**
+     * Character of a loaded power instance. Inline powers carry auto-generated
+     * ids (mypack:race_power_0) that say nothing about their type, so the type
+     * is recovered from the (fully unwrapped) class name instead.
+     */
+    static int powerWeight(dev.raceapi.race.Power power) {
+        String name = power.getWrapped().getClass().getSimpleName();
+        if (name.endsWith("Power")) {
+            name = name.substring(0, name.length() - 5);
+        }
+        StringBuilder snake = new StringBuilder();
+        for (char ch : name.toCharArray()) {
+            if (Character.isUpperCase(ch)) {
+                if (snake.length() > 0) {
+                    snake.append('_');
+                }
+                snake.append(Character.toLowerCase(ch));
+            } else {
+                snake.append(ch);
+            }
+        }
+        return powerTypeWeight(snake.toString());
+    }
+
     private UIElement buildBalanceMeter() {
         var row = new UIElement().layout(l -> l.widthPercent(100).flexDirection(FlexDirection.ROW)
                 .gapAll(6).alignItems(AlignItems.CENTER));
