@@ -1,0 +1,37 @@
+{
+  "display_name": "Ледяной отшельник",
+  "description": "Душа этого отшельника застыла много веков назад. Каждое его касание промораживает до костей, вода стала родной стихией, а ледяное спокойствие граничит с медлительностью ледника.",
+  "icon": "minecraft:blue_ice",
+  "difficulty": 1,
+  "scale": 1.0,
+  "powers": [
+    {
+      "type": "raceapi:frost_aura",
+      "radius": 4.0,
+      "display_name": "Морозная аура",
+      "description": "Враги рядом с вами мёрзнут и замедляются.",
+      "difficulty": -1
+    },
+    {
+      "type": "raceapi:frost_touch",
+      "display_name": "Ледяное касание",
+      "description": "Ваши удары промораживают врага.",
+      "difficulty": -1
+    },
+    {
+      "type": "raceapi:aqua_haste",
+      "display_name": "Родная стихия",
+      "description": "Под водой вы двигаетесь заметно быстрее.",
+      "difficulty": -1
+    },
+    {
+      "type": "raceapi:attribute",
+      "attribute": "minecraft:movement_speed",
+      "amount": -0.15,
+      "operation": "add_multiplied_total",
+      "display_name": "Ледниковая поступь",
+      "description": "Холод сковал ваши ноги: скорость снижена.",
+      "difficulty": 2
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "display_name": "Дитя ветра",
+  "description": "Этот народ ходит по земле, но никогда не принадлежит ей. Двойной прыжок и рывок позволяют парить над опасностями, но стоит зависнуть в воздухе — и лёгкие косточки дают о себе знать.",
+  "icon": "minecraft:feather",
+  "difficulty": 1,
+  "scale": 1.0,
+  "powers": [
+    {
+      "type": "raceapi:double_jump",
+      "display_name": "Второй прыжок",
+      "description": "Можно прыгнуть ещё раз прямо в воздухе.",
+      "difficulty": -1
+    },
+    {
+      "type": "raceapi:dash",
+      "cooldown": 40,
+      "strength": 2.0,
+      "display_name": "Порыв",
+      "description": "Стремительный рывок вперёд по взгляду.",
+      "difficulty": -1,
+      "bind_slot": 0
+    },
+    {
+      "type": "raceapi:safe_landing",
+      "display_name": "Лёгкое падение",
+      "description": "Урон от падения отсутствует.",
+      "difficulty": -1
+    },
+    {
+      "type": "raceapi:airborne_fragility",
+      "display_name": "Лёгкие кости",
+      "description": "Пока вы в воздухе, любой урон удваивается.",
+      "difficulty": 2
+    }
+  ]
+}

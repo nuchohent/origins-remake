@@ -1,0 +1,29 @@
+{
+  "display_name": "Дитя ночи",
+  "description": "Когда садится солнце, этот народ просыпается. Тьма — его дом и оружие: шаг сквозь тени бьёт врагу в спину. Но яркий солнечный свет жжёт не хуже лавы.",
+  "icon": "minecraft:ender_eye",
+  "difficulty": 1,
+  "scale": 1.0,
+  "powers": [
+    {
+      "type": "raceapi:night_vision",
+      "display_name": "Ночное зрение",
+      "description": "Во тьме вы видите всё.",
+      "difficulty": -1
+    },
+    {
+      "type": "raceapi:shadow_step",
+      "cooldown": 100,
+      "display_name": "Шаг сквозь тени",
+      "description": "Телепорт за спину ближайшему врагу с ударом в спину.",
+      "difficulty": -2,
+      "bind_slot": 0
+    },
+    {
+      "type": "raceapi:light_sensitive",
+      "display_name": "Светочувствительность",
+      "description": "Яркий солнечный свет поджигает вас.",
+      "difficulty": 2
+    }
+  ]
+}

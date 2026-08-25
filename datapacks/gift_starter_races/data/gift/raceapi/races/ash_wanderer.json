@@ -1,0 +1,36 @@
+{
+  "display_name": "Пепельный странник",
+  "description": "Рождён в сердце вулкана. Огонь ласкает его, как тёплый плед, и обжигает всех, кто подойдёт слишком близко. Но пламя внутри требует топлива — странник вечно голоден, а вода для него хуже лавы.",
+  "icon": "minecraft:blaze_powder",
+  "difficulty": 0,
+  "scale": 1.0,
+  "powers": [
+    {
+      "type": "raceapi:damage_immunity",
+      "damage_type": "fire",
+      "display_name": "Дитя пламени",
+      "description": "Огонь и лава не причиняют вам урона.",
+      "difficulty": -3
+    },
+    {
+      "type": "raceapi:fire_aura",
+      "radius": 3.0,
+      "fire_ticks": 3,
+      "display_name": "Жар тела",
+      "description": "Враги рядом с вами воспламеняются.",
+      "difficulty": -1
+    },
+    {
+      "type": "raceapi:ravenous",
+      "display_name": "Вечный голод",
+      "description": "Внутреннее пламя прожорливо: голод наступает быстрее.",
+      "difficulty": 2
+    },
+    {
+      "type": "raceapi:thermal_shock",
+      "display_name": "Вода — смерть",
+      "description": "Вода и дождь причиняют сильную боль.",
+      "difficulty": 2
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "display_name": "Каменный страж",
+  "description": "Пробуждённая статуя древнего города. Стрелы отскакивают от гранитной кожи, а его кулаки ломают щиты — но попробуй заставь камень бегать или плавать.",
+  "icon": "minecraft:stone",
+  "difficulty": 0,
+  "scale": 1.0,
+  "powers": [
+    {
+      "type": "raceapi:toughness",
+      "reduction": 0.35,
+      "display_name": "Гранитная кожа",
+      "description": "Получаемый урон снижен на 35%.",
+      "difficulty": -1
+    },
+    {
+      "type": "raceapi:attribute",
+      "attribute": "minecraft:max_health",
+      "amount": 6.0,
+      "operation": "add_value",
+      "display_name": "Монолит",
+      "description": "+3 сердца здоровья.",
+      "difficulty": -1
+    },
+    {
+      "type": "raceapi:step_height",
+      "display_name": "Шаг гиганта",
+      "description": "Автоматически переступаете через блок.",
+      "difficulty": -1
+    },
+    {
+      "type": "raceapi:attribute",
+      "attribute": "minecraft:movement_speed",
+      "amount": -0.15,
+      "operation": "add_multiplied_total",
+      "display_name": "Каменная поступь",
+      "description": "Камень не бегает: скорость снижена.",
+      "difficulty": 2
+    },
+    {
+      "type": "raceapi:density_anchor",
+      "display_name": "Камень тонет",
+      "description": "Плавать не получится — вы идёте по дну.",
+      "difficulty": 1
+    }
+  ]
+}
