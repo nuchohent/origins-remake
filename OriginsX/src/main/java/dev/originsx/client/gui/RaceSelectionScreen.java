@@ -626,15 +626,26 @@ public final class RaceSelectionScreen {
     }
 
     private static UIElement passivePowerRow(Power power) {
-        boolean strength = power.getDifficulty() >= 0;
-        Component prefix = strength
-                ? Component.literal("+ ").withStyle(ChatFormatting.GREEN)
-                : Component.literal("- ").withStyle(ChatFormatting.RED);
+        // same character heuristic as the creator picker / balance meter:
+        // type weight plus manual difficulty; negative = buff
+        int score = RaceCreatorPanel.powerTypeWeight(power.getId().getPath()) + power.getDifficulty();
+        Component prefix;
+        int nameColor;
+        if (score < 0) {
+            prefix = Component.literal("+ ").withStyle(ChatFormatting.GREEN);
+            nameColor = 0xFF55FF55;
+        } else if (score > 0) {
+            prefix = Component.literal("- ").withStyle(ChatFormatting.RED);
+            nameColor = 0xFFFF5555;
+        } else {
+            prefix = Component.empty();
+            nameColor = UiPalette.TEXT;
+        }
         var row = new UIElement().layout(l -> l.widthPercent(100).flexDirection(FlexDirection.COLUMN).gapAll(1)
                 .paddingLeft(6));
         row.addChild(new Label().setText(prefix.copy().append(power.getDisplayName()))
                 .textStyle(style -> style.fontSize(9)
-                        .textColor(strength ? 0xFF55FF55 : 0xFFFF5555)
+                        .textColor(nameColor)
                         .textWrap(TextWrap.WRAP)
                         .adaptiveHeight(true)));
         if (power.getDescription() != null) {
