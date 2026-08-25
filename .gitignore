@@ -30,3 +30,6 @@ desktop.ini
 *.log
 hs_err_pid*
 replay_pid*
+
+# Gradle логи
+logs/
