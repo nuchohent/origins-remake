@@ -1280,6 +1280,8 @@ public final class RaceCreatorPanel {
         if (spec.bound) {
             String slot = newPowerValues.getOrDefault("bind_slot", "0");
             power.values.put("bind_slot", slot.isEmpty() ? "0" : slot);
+            String cost = newPowerValues.getOrDefault("cost", "0");
+            power.values.put("cost", cost.isEmpty() ? "0" : cost);
         }
         if (spec == PowerTypeSpec.CONDITIONAL) {
             power.nested = copyDraft(nestedPower);

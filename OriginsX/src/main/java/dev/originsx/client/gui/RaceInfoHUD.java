@@ -75,8 +75,8 @@ public final class RaceInfoHUD {
     private static ModularUIScreen create(Race race) {
         var root = new UIElement();
         root.layout(l -> l.width(260).heightPercent(100).flexDirection(FlexDirection.COLUMN)
-                .gapAll(4).paddingAll(8).alignItems(AlignItems.STRETCH))
-                .style(s -> s.background(new ColorRectTexture(0xC00B0B12)));
+                .gapAll(4).paddingAll(10).alignItems(AlignItems.STRETCH))
+                .style(s -> s.background(new ColorRectTexture(0xF014141A)));
 
         var scroller = new com.lowdragmc.lowdraglib2.gui.ui.elements.ScrollerView();
         scroller.layout(l -> l.flex(1).widthPercent(100));
@@ -89,9 +89,12 @@ public final class RaceInfoHUD {
                     .style(s -> s.backgroundTexture(new ItemStackTexture(race.getIcon()))));
             var nameCol = new UIElement().layout(l -> l.flex(1).flexDirection(FlexDirection.COLUMN).gapAll(2));
             nameCol.addChild(new Label().setText(race.getDisplayName())
-                    .textStyle(style -> style.fontSize(14).textColor(0xFF55CCFF)));
+                    .textStyle(style -> style.fontSize(16).textColor(UiPalette.ACCENT_BRIGHT)));
             header.addChild(nameCol);
             view.addChild(header);
+
+            view.addChild(new UIElement().layout(l -> l.widthPercent(100).height(1))
+                    .style(s -> s.background(new ColorRectTexture(UiPalette.ACCENT_BRIGHT))));
 
             view.addChild(new DifficultyBar(race.getDifficulty()));
 
@@ -116,14 +119,14 @@ public final class RaceInfoHUD {
 
             if (!active.isEmpty()) {
                 view.addChild(new Label().setText("originsx.gui.powers.active")
-                        .textStyle(style -> style.fontSize(9).textColor(UiPalette.ACCENT)));
+                        .textStyle(style -> style.fontSize(9).textColor(UiPalette.ACCENT_BRIGHT)));
                 for (Power power : active) {
                     view.addChild(activePowerRow(race, power));
                 }
             }
             if (!passive.isEmpty()) {
                 view.addChild(new Label().setText("originsx.gui.powers.passive")
-                        .textStyle(style -> style.fontSize(9).textColor(UiPalette.ACCENT)));
+                        .textStyle(style -> style.fontSize(9).textColor(UiPalette.ACCENT_BRIGHT)));
                 for (Power power : passive) {
                     view.addChild(passivePowerRow(power));
                 }
@@ -133,7 +136,7 @@ public final class RaceInfoHUD {
         root.addChild(scroller);
 
         var footer = new Label().setText("originsx.hud.close");
-        footer.textStyle(style -> style.fontSize(8));
+        footer.textStyle(style -> style.fontSize(8).textColor(UiPalette.TEXT_HINT));
         root.addChild(footer);
 
         var ui = UI.of(root, StylesheetManager.INSTANCE.getStylesheetSafe(StylesheetManager.GDP));
@@ -151,7 +154,7 @@ public final class RaceInfoHUD {
                 : Component.empty();
         Component nameText = keyLabel.copy().append(" ").append(power.getDisplayName());
         row.addChild(new Label().setText(nameText)
-                .textStyle(style -> style.fontSize(9).textColor(0xFFDDDDDD)
+                .textStyle(style -> style.fontSize(9).textColor(UiPalette.ACCENT_BRIGHT)
                         .textWrap(TextWrap.WRAP).adaptiveHeight(true)));
         if (power.getDescription() != null) {
             row.addChild(new Label().setText(power.getDescription())
@@ -162,15 +165,25 @@ public final class RaceInfoHUD {
     }
 
     private static UIElement passivePowerRow(Power power) {
-        boolean strength = power.getDifficulty() >= 0;
-        Component prefix = strength
-                ? Component.literal("+ ").withStyle(ChatFormatting.GREEN)
-                : Component.literal("- ").withStyle(ChatFormatting.RED);
+        // balance convention: negative difficulty = buff, positive = weakness
+        int difficulty = power.getDifficulty();
+        Component prefix;
+        int nameColor;
+        if (difficulty < 0) {
+            prefix = Component.literal("+ ").withStyle(ChatFormatting.GREEN);
+            nameColor = 0xFF55FF55;
+        } else if (difficulty > 0) {
+            prefix = Component.literal("- ").withStyle(ChatFormatting.RED);
+            nameColor = 0xFFFF5555;
+        } else {
+            prefix = Component.empty();
+            nameColor = UiPalette.TEXT;
+        }
         var row = new UIElement().layout(l -> l.widthPercent(100).flexDirection(FlexDirection.COLUMN).gapAll(1)
                 .paddingLeft(6));
         row.addChild(new Label().setText(prefix.copy().append(power.getDisplayName()))
                 .textStyle(style -> style.fontSize(9)
-                        .textColor(strength ? 0xFF55FF55 : 0xFFFF5555)
+                        .textColor(nameColor)
                         .textWrap(TextWrap.WRAP)
                         .adaptiveHeight(true)));
         if (power.getDescription() != null) {
