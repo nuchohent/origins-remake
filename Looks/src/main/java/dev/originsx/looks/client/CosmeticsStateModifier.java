@@ -39,7 +39,14 @@ public final class CosmeticsStateModifier {
         });
     }
 
-    private static List<Extracted> extract(Avatar entity) {
+    /**
+     * Public so the editor viewport can run the same extraction manually:
+     * the viewport renders via {@code renderer.createRenderState} directly and
+     * never goes through the render-feature phase where NeoForge applies
+     * registered state modifiers — without this call the cosmetics would
+     * never appear (nor update) in the preview.
+     */
+    public static List<Extracted> extract(Avatar entity) {
         if (entity.isInvisible() || entity.isSpectator()) {
             return List.of();
         }

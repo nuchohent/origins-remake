@@ -433,16 +433,27 @@ public final class LooksScreen extends ModularUIScreen {
                 if (renderState instanceof LivingEntityRenderState livingState) {
                     livingState.bodyRot = 180.0F + xAngle * 20.0F;
                     livingState.yRot = xAngle * 20.0F;
-                    if (livingState.pose != Pose.FALL_FLYING) {
-                        livingState.xRot = -yAngle * 20.0F;
-                    } else {
-                        livingState.xRot = 0.0F;
-                    }
+                    // pitch is already applied to the WHOLE model via the
+                    // xRotation quaternion; setting xRot here would tilt the
+                    // HEAD a second time (head spun twice as fast as body)
+                    livingState.xRot = 0.0F;
                     livingState.boundingBoxWidth =
                             livingState.boundingBoxWidth / livingState.scale;
                     livingState.boundingBoxHeight =
                             livingState.boundingBoxHeight / livingState.scale;
                     livingState.scale = 1.0F;
+                }
+                // the vanilla shadow is drawn as two halves rotated by the
+                // body angle — with our overridden angles the halves split
+                // apart, so no shadow in the viewport
+                renderState.shadowRadius = 0.0F;
+                // manual render bypasses the render-feature phase where the
+                // NeoForge state modifier bakes cosmetics into the state —
+                // run the extraction here so the viewport preview is live
+                if (renderState instanceof AvatarRenderState avatarState
+                        && target instanceof net.minecraft.world.entity.Avatar avatar) {
+                    avatarState.setRenderData(LooksClient.RENDER_DATA,
+                            CosmeticsStateModifier.extract(avatar));
                 }
 
                 Vector3f translation = new Vector3f(0.0F,
@@ -551,16 +562,16 @@ public final class LooksScreen extends ModularUIScreen {
 
         var rPos = row();
         rPos.addChild(fieldLabelFixed("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".field.pos"));
-        rPos.addChild(labeledFieldFlex(fPx));
-        rPos.addChild(labeledFieldFlex(fPy));
-        rPos.addChild(labeledFieldFlex(fPz));
+        rPos.addChild(labeledAxisField(fPx, "X"));
+        rPos.addChild(labeledAxisField(fPy, "Y"));
+        rPos.addChild(labeledAxisField(fPz, "Z"));
         detailGroup.addChild(rPos);
 
         var rRot = row();
         rRot.addChild(fieldLabelFixed("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".field.rot"));
-        rRot.addChild(labeledFieldFlex(fRx));
-        rRot.addChild(labeledFieldFlex(fRy));
-        rRot.addChild(labeledFieldFlex(fRz));
+        rRot.addChild(labeledAxisField(fRx, "X"));
+        rRot.addChild(labeledAxisField(fRy, "Y"));
+        rRot.addChild(labeledAxisField(fRz, "Z"));
         detailGroup.addChild(rRot);
 
         var rScale = row();
@@ -651,8 +662,19 @@ public final class LooksScreen extends ModularUIScreen {
         return lb;
     }
 
-    private static UIElement labeledFieldFlex(TextField tf) {
+    private static UIElement labeledAxisField(TextField tf, String axis) {
         var col = new UIElement().layout(l -> l.flex(1).minWidth(1)
+                .flexDirection(FlexDirection.COLUMN).gapAll(1)
+                .alignItems(AlignItems.STRETCH));
+        var lb = new Label();
+        lb.setText(Component.literal(axis));
+        lb.textStyle(s -> s.fontSize(7).textColor(0xFF9A9AA0));
+        col.addChild(lb);
+        col.addChild(tf);
+        return col;
+    }
+
+    private static UIElement labeledFieldFlex(TextField tf) {        var col = new UIElement().layout(l -> l.flex(1).minWidth(1)
                 .flexDirection(FlexDirection.COLUMN).gapAll(1)
                 .alignItems(AlignItems.STRETCH));
         col.addChild(tf);

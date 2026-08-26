@@ -170,8 +170,10 @@ public final class RegistryPicker extends UIElement {
                     list.add(entry(BuiltInRegistries.ITEM.getKey(item), new ItemStack(item))));
             case ENTITY -> BuiltInRegistries.ENTITY_TYPE.forEach(type -> {
                 Identifier id = BuiltInRegistries.ENTITY_TYPE.getKey(type);
-                // the player type is not summonable
-                if (!id.getPath().equals("player")) {
+                // the player type is not summonable; only living mobs make
+                // sense as a target model — no boats/minecarts/paintings
+                if (!id.getPath().equals("player")
+                        && net.minecraft.world.entity.LivingEntity.class.isAssignableFrom(type.getBaseClass())) {
                     list.add(entry(id, type));
                 }
             });
