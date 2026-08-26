@@ -125,6 +125,9 @@ public final class LooksScreen extends ModularUIScreen {
     private Button modeEntityBtn;
     private UIElement entityPickRow;
 
+    /** One-shot diagnostics of the viewport cosmetics data path. */
+    private static boolean loggedViewportProbe;
+
     // toast: transient on-screen notification (chat is not used on purpose)
     private UIElement toastHost;
     private Label toastLabel;
@@ -143,6 +146,10 @@ public final class LooksScreen extends ModularUIScreen {
         populateRoot(root);
         rebuildList();
         fillFields();
+        // publish BEFORE the first edit: without this the preview override is
+        // empty until the player touches a field, so a race that differs from
+        // the locally selected one shows NO cosmetics at all on open
+        publishPreview();
     }
 
     private static UIElement createRoot() {
@@ -207,7 +214,7 @@ public final class LooksScreen extends ModularUIScreen {
 
         content.addChild(buildViewportColumn());
 
-        var right = new UIElement().layout(l -> l.flex(1)
+        var right = new UIElement().layout(l -> l.width(400)
                 .flexDirection(FlexDirection.COLUMN).gapAll(4));
         // cosmetics list
         var listPanel = new UIElement().layout(l -> l.flex(1).widthPercent(100));
@@ -247,7 +254,7 @@ public final class LooksScreen extends ModularUIScreen {
      * vanilla inventory-entity pipeline, so the cosmetics layer shows up live.
      */
     private UIElement buildViewportColumn() {
-        var col = new UIElement().layout(l -> l.width(190)
+        var col = new UIElement().layout(l -> l.width(320)
                 .flexDirection(FlexDirection.COLUMN).gapAll(3));
 
         var modes = row();
@@ -432,10 +439,17 @@ public final class LooksScreen extends ModularUIScreen {
                 }
                 if (renderState instanceof LivingEntityRenderState livingState) {
                     livingState.bodyRot = 180.0F + xAngle * 20.0F;
-                    livingState.yRot = xAngle * 20.0F;
-                    // pitch is already applied to the WHOLE model via the
-                    // xRotation quaternion; setting xRot here would tilt the
-                    // HEAD a second time (head spun twice as fast as body)
+                    // yRot is the HEAD-yaw RELATIVE to the body in 26.2
+                    // (LivingEntityRenderer.extractRenderState:
+                    // yRot = wrapDegrees(headRot - bodyRot); applied on top of
+                    // the body turn by HumanoidModel.setupAnim). Vanilla
+                    // inventory sets it non-zero so the head tracks the mouse
+                    // FASTER than the body — for a rigid editor preview it
+                    // must stay 0, or the head spins twice as fast.
+                    livingState.yRot = 0.0F;
+                    // same for pitch: it is already applied to the WHOLE model
+                    // via the xRotation quaternion; a non-zero xRot would tilt
+                    // only the head a second time
                     livingState.xRot = 0.0F;
                     livingState.boundingBoxWidth =
                             livingState.boundingBoxWidth / livingState.scale;
@@ -443,17 +457,29 @@ public final class LooksScreen extends ModularUIScreen {
                             livingState.boundingBoxHeight / livingState.scale;
                     livingState.scale = 1.0F;
                 }
-                // the vanilla shadow is drawn as two halves rotated by the
-                // body angle — with our overridden angles the halves split
-                // apart, so no shadow in the viewport
+                // vanilla shadow is built from shadowPieces that rotate with
+                // the body; clearing them + zeroing radius removes the split
                 renderState.shadowRadius = 0.0F;
+                renderState.shadowPieces.clear();
                 // manual render bypasses the render-feature phase where the
                 // NeoForge state modifier bakes cosmetics into the state —
                 // run the extraction here so the viewport preview is live
                 if (renderState instanceof AvatarRenderState avatarState
                         && target instanceof net.minecraft.world.entity.Avatar avatar) {
-                    avatarState.setRenderData(LooksClient.RENDER_DATA,
-                            CosmeticsStateModifier.extract(avatar));
+                    var extracted = CosmeticsStateModifier.extract(avatar);
+                    avatarState.setRenderData(LooksClient.RENDER_DATA, extracted);
+                    // one-shot diagnostics: proves whether the cosmetics data
+                    // reaches the PIP-rendered state (if items are still
+                    // invisible with size > 0 here, CosmeticsLayer.submit is
+                    // the broken link — its own log fires once)
+                    if (!loggedViewportProbe) {
+                        loggedViewportProbe = true;
+                        dev.originsx.looks.LooksMod.LOGGER.info(
+                                "[Looks] viewport probe: renderer={}, extracted={}, hasData={}",
+                                renderer.getClass().getSimpleName(),
+                                extracted.size(),
+                                avatarState.getRenderData(LooksClient.RENDER_DATA) != null);
+                    }
                 }
 
                 Vector3f translation = new Vector3f(0.0F,
@@ -610,7 +636,7 @@ public final class LooksScreen extends ModularUIScreen {
 
     private TextField numberField(String key, float initial) {
         var tf = new TextField();
-        tf.layout(l -> l.height(14));
+        tf.layout(l -> l.height(18));
         tf.textFieldStyle(s -> s.placeholder(Component.literal(
                 String.valueOf(initial))));
         tf.setTextResponder(v -> {

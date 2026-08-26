@@ -20,6 +20,7 @@
   "gui.originsx_looks.picker.cat_all": "Все предметы",
   "gui.originsx_looks.picker.empty": "Поиск ничего не нашёл",
   "gui.originsx_looks.picker.more": "... показаны первые %s совпадений, уточните поиск",
+  "gui.originsx_looks.picker.none": "Выбрать...",
   "gui.originsx_looks.picker.search": "Поиск...",
   "gui.originsx_looks.save": "Сохранить",
   "gui.originsx_looks.save.done": "Внешность сохранена и перезагружена",

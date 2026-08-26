@@ -20,6 +20,7 @@
   "gui.originsx_looks.picker.cat_all": "All items",
   "gui.originsx_looks.picker.empty": "Nothing matches the search",
   "gui.originsx_looks.picker.more": "... showing first %s matches, refine the search",
+  "gui.originsx_looks.picker.none": "Select...",
   "gui.originsx_looks.picker.search": "Search...",
   "gui.originsx_looks.save": "Save",
   "gui.originsx_looks.save.done": "Appearance saved and reloaded",
