@@ -1088,7 +1088,7 @@ public final class SkillTreeScreen extends ModularUIScreen {
         int tier = SkillTreeClientState.tierOf(node.id());
         double nowFactor = TIER_FACTOR[Math.min(tier, 3)];
         infoTier.setText(Component.literal(translated("gui.originsx_skilltree.tier_status",
-                roman(tier), roman(3))
+                tier, 3)
                 + (requirementsMet(node) ? "" : "   " + translated("gui.originsx_skilltree.req_missing"))));
         if (!requirementsMet(node)) {
             infoEffect.setText(Component.empty());
@@ -1236,15 +1236,6 @@ public final class SkillTreeScreen extends ModularUIScreen {
             }
         }
         return sb.toString();
-    }
-
-    private static String roman(int tier) {
-        return switch (tier) {
-            case 1 -> "I";
-            case 2 -> "II";
-            case 3 -> "III";
-            default -> "0";
-        };
     }
 
     // ------------------------------------------------------------------

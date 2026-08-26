@@ -312,8 +312,9 @@ public final class RaceSelectionScreen {
             }
         }
 
-        // Actions: select + reset
-        var actions = new UIElement().layout(l -> l.widthPercent(100).flexDirection(FlexDirection.ROW).gapAll(6));
+        // Actions: column of rows — six buttons in one row overflow the panel
+        var actions = new UIElement().layout(l -> l.widthPercent(100).flexDirection(FlexDirection.COLUMN).gapAll(4));
+        var actionsRowA = new UIElement().layout(l -> l.widthPercent(100).flexDirection(FlexDirection.ROW).gapAll(6));
         var selectButton = new Button();
         boolean isCurrentRace = race.getId().equals(SelectedRaceClient.getOrNull());
         selectButton.setText(isCurrentRace ? "originsx.gui.selected" : "originsx.gui.select")
@@ -333,6 +334,9 @@ public final class RaceSelectionScreen {
         });
         actions.addChildren(selectButton, resetButton);
 
+        actionsRowA.addChildren(selectButton, resetButton);
+        actions.addChild(actionsRowA);
+
         Path customFile = findCustomRaceFile(race);
         if (customFile != null) {
             var editButton = new Button();
@@ -349,7 +353,9 @@ public final class RaceSelectionScreen {
             deleteButton.setText("originsx.gui.delete").layout(l -> l.flex(1).height(22));
             deleteButton.textStyle(s -> s.fontSize(9));
             deleteButton.setOnClick(e -> deleteRace(race, customFile));
-            actions.addChildren(editButton, exportButton, deleteButton);
+            var actionsRowB = new UIElement().layout(l -> l.widthPercent(100).flexDirection(FlexDirection.ROW).gapAll(6));
+            actionsRowB.addChildren(editButton, exportButton, deleteButton);
+            actions.addChild(actionsRowB);
 
             // looks editor lives in an optional addon; a dead button would be
             // worse than none
