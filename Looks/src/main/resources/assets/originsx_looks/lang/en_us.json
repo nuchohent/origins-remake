@@ -7,9 +7,9 @@
   "gui.originsx_looks.empty": "No cosmetics yet. Add one to attach an item to a bone.",
   "gui.originsx_looks.field.item": "item",
   "gui.originsx_looks.field.part": "body part",
-  "gui.originsx_looks.field.pos": "pos",
-  "gui.originsx_looks.field.rot": "rot",
-  "gui.originsx_looks.field.scale": "scale",
+  "gui.originsx_looks.field.pos": "Position",
+  "gui.originsx_looks.field.rot": "Rotation",
+  "gui.originsx_looks.field.scale": "Scale",
   "gui.originsx_looks.part.body": "Body",
   "gui.originsx_looks.part.head": "Head",
   "gui.originsx_looks.part.left_arm": "Left arm",
@@ -26,5 +26,9 @@
   "gui.originsx_looks.save.failed": "Failed to save appearance",
   "gui.originsx_looks.save.not_found": "Race file not found in world datapacks",
   "gui.originsx_looks.save.singleplayer_only": "Appearance editing is available in singleplayer worlds only",
-  "gui.originsx_looks.title": "Appearance"
+  "gui.originsx_looks.title": "Appearance",
+  "gui.originsx_looks.viewport.player": "Player",
+  "gui.originsx_looks.viewport.slim": "Slim",
+  "gui.originsx_looks.viewport.entity": "Entity",
+  "gui.originsx_looks.viewport.model_hint": "model preview"
 }

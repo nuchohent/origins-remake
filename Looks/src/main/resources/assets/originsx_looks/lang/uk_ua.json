@@ -7,9 +7,9 @@
   "gui.originsx_looks.empty": "Косметики ще немає. Додайте елемент, щоб прикріпити предмет до кістки.",
   "gui.originsx_looks.field.item": "предмет",
   "gui.originsx_looks.field.part": "частина тіла",
-  "gui.originsx_looks.field.pos": "поз.",
-  "gui.originsx_looks.field.rot": "пов.",
-  "gui.originsx_looks.field.scale": "масшт.",
+  "gui.originsx_looks.field.pos": "Позиція",
+  "gui.originsx_looks.field.rot": "Поворот",
+  "gui.originsx_looks.field.scale": "Масштаб",
   "gui.originsx_looks.part.body": "Тіло",
   "gui.originsx_looks.part.head": "Голова",
   "gui.originsx_looks.part.left_arm": "Ліва рука",
@@ -26,5 +26,9 @@
   "gui.originsx_looks.save.failed": "Не вдалося зберегти зовнішність",
   "gui.originsx_looks.save.not_found": "Файл раси не знайдено в датапаках світу",
   "gui.originsx_looks.save.singleplayer_only": "Редактор зовнішності доступний лише в одиночних світах",
-  "gui.originsx_looks.title": "Зовнішність"
+  "gui.originsx_looks.title": "Зовнішність",
+  "gui.originsx_looks.viewport.player": "Гравець",
+  "gui.originsx_looks.viewport.slim": "Стрункий",
+  "gui.originsx_looks.viewport.entity": "Сутність",
+  "gui.originsx_looks.viewport.model_hint": "прев'ю моделі"
 }

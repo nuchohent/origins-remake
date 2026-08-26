@@ -7,9 +7,9 @@
   "gui.originsx_looks.empty": "Косметики пока нет. Добавьте элемент, чтобы прикрепить предмет к кости.",
   "gui.originsx_looks.field.item": "предмет",
   "gui.originsx_looks.field.part": "часть тела",
-  "gui.originsx_looks.field.pos": "поз.",
-  "gui.originsx_looks.field.rot": "пов.",
-  "gui.originsx_looks.field.scale": "масшт.",
+  "gui.originsx_looks.field.pos": "Позиция",
+  "gui.originsx_looks.field.rot": "Поворот",
+  "gui.originsx_looks.field.scale": "Масштаб",
   "gui.originsx_looks.part.body": "Тело",
   "gui.originsx_looks.part.head": "Голова",
   "gui.originsx_looks.part.left_arm": "Левая рука",
@@ -26,5 +26,9 @@
   "gui.originsx_looks.save.failed": "Не удалось сохранить внешность",
   "gui.originsx_looks.save.not_found": "Файл расы не найден в датапаках мира",
   "gui.originsx_looks.save.singleplayer_only": "Редактор внешности доступен только в одиночных мирах",
-  "gui.originsx_looks.title": "Внешность"
+  "gui.originsx_looks.title": "Внешность",
+  "gui.originsx_looks.viewport.player": "Игрок",
+  "gui.originsx_looks.viewport.slim": "Слим",
+  "gui.originsx_looks.viewport.entity": "Сущность",
+  "gui.originsx_looks.viewport.model_hint": "превью модели"
 }

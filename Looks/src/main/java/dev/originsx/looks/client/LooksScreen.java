@@ -6,6 +6,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.lowdragmc.lowdraglib2.gui.holder.ModularUIScreen;
 import com.lowdragmc.lowdraglib2.gui.texture.ColorRectTexture;
+import com.lowdragmc.lowdraglib2.gui.texture.GuiTexture;
 import com.lowdragmc.lowdraglib2.gui.texture.ItemStackTexture;
 import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
 import com.lowdragmc.lowdraglib2.gui.ui.UI;
@@ -16,18 +17,37 @@ import com.lowdragmc.lowdraglib2.gui.ui.elements.Label;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.ScrollerView;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.Selector;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.TextField;
+import com.lowdragmc.lowdraglib2.gui.ui.event.UIEvents;
+import com.lowdragmc.lowdraglib2.gui.ui.rendering.GUIContext;
 import dev.vfyjxf.taffy.style.AlignItems;
 import dev.vfyjxf.taffy.style.FlexDirection;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntitySpawnRequest;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.player.PlayerModelType;
+import net.minecraft.world.entity.player.PlayerSkin;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.LevelResource;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
+import org.jetbrains.annotations.Nullable;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -54,6 +74,15 @@ public final class LooksScreen extends ModularUIScreen {
     private static final Gson PRETTY = new GsonBuilder()
             .setPrettyPrinting().disableHtmlEscaping().create();
 
+    /** Viewport modes: whose model the 3D preview shows. */
+    private static final int MODE_PLAYER = 0;
+    private static final int MODE_SLIM = 1;
+    private static final int MODE_ENTITY = 2;
+    private static final int VIEWPORT_BG = 0xFF14141B;
+    private static final float VP_YAW_MIN = -180f;
+    private static final float VP_YAW_MAX = 180f;
+    private static final float VP_PITCH_LIMIT = 60f;
+
     /** Passes the root element from the super() call into the constructor body. */
     private static final ThreadLocal<UIElement> ROOT_HOLDER = new ThreadLocal<>();
 
@@ -67,6 +96,8 @@ public final class LooksScreen extends ModularUIScreen {
     private UIElement detailGroup;
     private Label emptyDetailHint;
     private RegistryPicker fItem;
+    @Nullable
+    private RegistryPicker fEntityPicker;
     private Selector<String> fPart;
     private TextField fPx;
     private TextField fPy;
@@ -76,6 +107,23 @@ public final class LooksScreen extends ModularUIScreen {
     private TextField fRz;
     private TextField fScale;
     private boolean loadingFields;
+
+    // 3D viewport state (left panel)
+    private int viewMode = MODE_PLAYER;
+    private float vpYaw = 25f;
+    private float vpPitch = -10f;
+    private float vpZoom = 30f;
+    private boolean vpDragging;
+    private float vpLastX;
+    private float vpLastY;
+    @Nullable
+    private String previewEntityId;
+    @Nullable
+    private LivingEntity previewEntity;
+    private Button modePlayerBtn;
+    private Button modeSlimBtn;
+    private Button modeEntityBtn;
+    private UIElement entityPickRow;
 
     // toast: transient on-screen notification (chat is not used on purpose)
     private UIElement toastHost;
@@ -153,6 +201,14 @@ public final class LooksScreen extends ModularUIScreen {
         root.addChild(header());
         root.addChild(separator());
 
+        // content row: 3D viewport on the left, list + editor on the right
+        var content = new UIElement().layout(l -> l.flex(1).widthPercent(100)
+                .flexDirection(FlexDirection.ROW).gapAll(4));
+
+        content.addChild(buildViewportColumn());
+
+        var right = new UIElement().layout(l -> l.flex(1)
+                .flexDirection(FlexDirection.COLUMN).gapAll(4));
         // cosmetics list
         var listPanel = new UIElement().layout(l -> l.flex(1).widthPercent(100));
         listPanel.style(s -> s.background(new ColorRectTexture(PANEL_BG)));
@@ -161,9 +217,11 @@ public final class LooksScreen extends ModularUIScreen {
         listScroller.viewContainer(view -> view.layout(l -> l.widthPercent(100)
                 .flexDirection(FlexDirection.COLUMN).gapAll(1)));
         listPanel.addChild(listScroller);
-        root.addChild(listPanel);
+        right.addChild(listPanel);
 
-        root.addChild(buildEditor());
+        right.addChild(buildEditor());
+        content.addChild(right);
+        root.addChild(content);
 
         // transient toast overlay (top strip), always on top of screen content
         toastHost = new UIElement().layout(l -> l.positionType(dev.vfyjxf.taffy.style.TaffyPosition.ABSOLUTE)
@@ -179,14 +237,233 @@ public final class LooksScreen extends ModularUIScreen {
         root.addChild(toastHost);
     }
 
+    // ------------------------------------------------------------------
+    //  3D viewport
+    // ------------------------------------------------------------------
+
+    /**
+     * Left column: model selector (player/slim/entity) on top and the 3D
+     * preview panel below. The panel renders the local player through the
+     * vanilla inventory-entity pipeline, so the cosmetics layer shows up live.
+     */
+    private UIElement buildViewportColumn() {
+        var col = new UIElement().layout(l -> l.width(190)
+                .flexDirection(FlexDirection.COLUMN).gapAll(3));
+
+        var modes = row();
+        modePlayerBtn = modeButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".viewport.player", MODE_PLAYER);
+        modeSlimBtn = modeButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".viewport.slim", MODE_SLIM);
+        modeEntityBtn = modeButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".viewport.entity", MODE_ENTITY);
+        updateModeButtons();
+        modes.addChild(modePlayerBtn);
+        modes.addChild(modeSlimBtn);
+        modes.addChild(modeEntityBtn);
+        col.addChild(modes);
+
+        entityPickRow = new UIElement().layout(l -> l.widthPercent(100)
+                .flexDirection(FlexDirection.COLUMN).gapAll(1));
+        fEntityPicker = new RegistryPicker(RegistryPicker.Kind.ENTITY);
+        fEntityPicker.layout(l -> l.widthPercent(100).height(16));
+        fEntityPicker.setOnValueChanged(v -> {
+            previewEntityId = v == null || v.isEmpty() ? null : v;
+            previewEntity = null;
+        });
+        entityPickRow.addChild(fEntityPicker);
+        Label hint = fieldLabel("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".viewport.model_hint");
+        hint.textStyle(s -> s.adaptiveWidth(true));
+        entityPickRow.addChild(hint);
+        entityPickRow.setDisplay(viewMode == MODE_ENTITY);
+        col.addChild(entityPickRow);
+
+        var viewport = new UIElement().layout(l -> l.flex(1).widthPercent(100));
+        viewport.style(s -> s.background(new ViewportTexture()));
+        viewport.addEventListener(UIEvents.MOUSE_DOWN, e -> {
+            if (e.button == 0) {
+                vpDragging = true;
+                vpLastX = e.x;
+                vpLastY = e.y;
+            }
+        });
+        viewport.addEventListener(UIEvents.MOUSE_MOVE, e -> {
+            if (!vpDragging) {
+                return;
+            }
+            float dx = e.x - vpLastX;
+            float dy = e.y - vpLastY;
+            vpLastX = e.x;
+            vpLastY = e.y;
+            vpYaw = wrapYaw(vpYaw + dx * 2f);
+            vpPitch = Mth.clamp(vpPitch - dy * 2f, -VP_PITCH_LIMIT, VP_PITCH_LIMIT);
+        });
+        viewport.addEventListener(UIEvents.MOUSE_UP, e -> {
+            if (e.button == 0) {
+                vpDragging = false;
+            }
+        });
+        viewport.addEventListener(UIEvents.MOUSE_LEAVE, e -> vpDragging = false);
+        viewport.addEventListener(UIEvents.MOUSE_WHEEL, e -> {
+            vpZoom = Mth.clamp(e.deltaY > 0 ? vpZoom * 1.1f : vpZoom / 1.1f, 15f, 80f);
+            e.stopPropagation();
+        });
+        col.addChild(viewport);
+        return col;
+    }
+
+    private Button modeButton(String key, int mode) {
+        Button btn = new Button();
+        btn.setText(key);
+        btn.textStyle(s -> s.fontSize(8));
+        btn.layout(l -> l.flex(1).height(14));
+        btn.setOnClick(e -> setViewMode(mode));
+        return btn;
+    }
+
+    private void setViewMode(int mode) {
+        viewMode = mode;
+        if (entityPickRow != null) {
+            entityPickRow.setDisplay(mode == MODE_ENTITY);
+        }
+        updateModeButtons();
+    }
+
+    private void updateModeButtons() {
+        modePlayerBtn.style(s -> s.background(new ColorRectTexture(
+                viewMode == MODE_PLAYER ? ROW_SELECTED : ROW_BG)));
+        modeSlimBtn.style(s -> s.background(new ColorRectTexture(
+                viewMode == MODE_SLIM ? ROW_SELECTED : ROW_BG)));
+        modeEntityBtn.style(s -> s.background(new ColorRectTexture(
+                viewMode == MODE_ENTITY ? ROW_SELECTED : ROW_BG)));
+    }
+
+    private static float wrapYaw(float yaw) {
+        float wrapped = yaw % 360f;
+        if (wrapped > VP_YAW_MAX) {
+            wrapped -= 360f;
+        } else if (wrapped < VP_YAW_MIN) {
+            wrapped += 360f;
+        }
+        return wrapped;
+    }
+
+    /** Who the viewport renders right now: player or the picked entity. */
+    @Nullable
+    private LivingEntity viewportTarget() {
+        Minecraft mc = Minecraft.getInstance();
+        if (viewMode == MODE_ENTITY && previewEntityId != null && mc.level != null) {
+            if (previewEntity == null || !previewEntityId.equals(entityIdOf(previewEntity))) {
+                recreatePreviewEntity(mc);
+            }
+            return previewEntity;
+        }
+        return mc.player;
+    }
+
+    private static String entityIdOf(LivingEntity entity) {
+        Identifier key = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
+        return key == null ? "" : key.toString();
+    }
+
+    /**
+     * Creates a detached (never added to the world) living entity of the
+     * picked type purely for rendering; ignoreChecks bypasses the peaceful-
+     * difficulty spawn gate so monsters can be previewed too.
+     */
+    private void recreatePreviewEntity(Minecraft mc) {
+        LivingEntity created = null;
+        try {
+            Identifier id = Identifier.tryParse(previewEntityId);
+            var holder = id == null ? null : BuiltInRegistries.ENTITY_TYPE.get(id);
+            EntityType<?> type = holder != null && holder.isPresent()
+                    ? holder.get().value() : null;
+            if (type != null && mc.level != null) {
+                Entity spawned = type.create(mc.level,
+                        new EntitySpawnRequest(EntitySpawnReason.COMMAND, true));
+                if (spawned instanceof LivingEntity living) {
+                    created = living;
+                }
+            }
+        } catch (Exception e) {
+            dev.originsx.looks.LooksMod.LOGGER.warn("Failed to create preview entity {}",
+                    previewEntityId, e);
+        }
+        previewEntity = created;
+    }
+
+    /**
+     * Dark panel + the model drawn with explicit yaw/pitch/zoom through the
+     * vanilla {@code InventoryScreen} entity-in-inventory math (extract state,
+     * override angles, submit as pictures-in-picture clipped to this rect).
+     * SLIM forces a slim copy of the player's skin onto the render state —
+     * the render dispatcher picks the narrow-armed renderer from it, keeping
+     * every layer (cosmetics included) alive.
+     */
+    private final class ViewportTexture implements GuiTexture {
+        @Override
+        public void draw(GUIContext context, float x, float y, float width, float height) {
+            var graphics = context.graphics;
+            int x0 = Mth.floor(x);
+            int y0 = Mth.floor(y);
+            int x1 = Mth.ceil(x + width);
+            int y1 = Mth.ceil(y + height);
+            graphics.fill(x0, y0, x1, y1, VIEWPORT_BG);
+
+            Minecraft mc = Minecraft.getInstance();
+            LivingEntity target = viewportTarget();
+            EntityRenderDispatcher dispatcher = mc.getEntityRenderDispatcher();
+            if (target == null || dispatcher.getRenderer(target) == null) {
+                return;
+            }
+            try {
+                // vanilla InventoryScreen angle convention: 20 units per atan-step
+                float xAngle = vpYaw / 20f;
+                float yAngle = vpPitch / 20f;
+                Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI);
+                Quaternionf xRotation = new Quaternionf()
+                        .rotateX(yAngle * 20.0F * (float) (Math.PI / 180.0));
+                rotation.mul(xRotation);
+
+                EntityRenderer<? super LivingEntity, ?> renderer = dispatcher.getRenderer(target);
+                EntityRenderState renderState = renderer.createRenderState(target, 1.0F);
+                if (renderState instanceof AvatarRenderState avatarState
+                        && viewMode == MODE_SLIM && mc.player != null) {
+                    PlayerSkin skin = mc.player.getSkin();
+                    avatarState.skin = new PlayerSkin(skin.body(), skin.cape(),
+                            skin.elytra(), PlayerModelType.SLIM, skin.secure());
+                }
+                if (renderState instanceof LivingEntityRenderState livingState) {
+                    livingState.bodyRot = 180.0F + xAngle * 20.0F;
+                    livingState.yRot = xAngle * 20.0F;
+                    if (livingState.pose != Pose.FALL_FLYING) {
+                        livingState.xRot = -yAngle * 20.0F;
+                    } else {
+                        livingState.xRot = 0.0F;
+                    }
+                    livingState.boundingBoxWidth =
+                            livingState.boundingBoxWidth / livingState.scale;
+                    livingState.boundingBoxHeight =
+                            livingState.boundingBoxHeight / livingState.scale;
+                    livingState.scale = 1.0F;
+                }
+
+                Vector3f translation = new Vector3f(0.0F,
+                        renderState.boundingBoxHeight / 2.0F + 0.0625F, 0.0F);
+                graphics.enableScissor(x0, y0, x1, y1);
+                graphics.entity(renderState, vpZoom, translation, rotation,
+                        xRotation, x0, y0, x1, y1);
+                graphics.disableScissor();
+            } catch (Exception e) {
+                dev.originsx.looks.LooksMod.LOGGER.debug("Viewport preview failed", e);
+            }
+        }
+    }
+
     private UIElement header() {
         var headerRow = new UIElement().layout(l ->
                 l.widthPercent(100).flexDirection(FlexDirection.ROW)
                         .gapAll(6).alignItems(AlignItems.CENTER));
         Label title = new Label();
         title.setText(Component.translatable("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".title"));
-        title.textStyle(style -> style.fontSize(14));
-        title.layout(l -> l.widthAuto());
+        title.textStyle(style -> style.fontSize(14).adaptiveWidth(true));
         headerRow.addChild(title);
 
         raceLabel = new Label();
@@ -367,9 +644,10 @@ public final class LooksScreen extends ModularUIScreen {
         return lb;
     }
 
+    /** Row-leading caption sized to its full text (no fixed width). */
     private static Label fieldLabelFixed(String key) {
         var lb = fieldLabel(key);
-        lb.layout(l -> l.width(30));
+        lb.textStyle(s -> s.adaptiveWidth(true));
         return lb;
     }
 
