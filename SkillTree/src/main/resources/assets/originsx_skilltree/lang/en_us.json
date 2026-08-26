@@ -63,5 +63,9 @@
   "node.originsx_skilltree.dryad_purified.desc": "Pure forest air thickens your wooden skin.",
   "node.originsx_skilltree.dryad_regeneration": "Deep Roots",
   "node.originsx_skilltree.dryad_regeneration.desc": "Ancient roots slowly knit your wounds closed.",
-  "gui.originsx_skilltree.hint.py": "64"
+  "gui.originsx_skilltree.hint.py": "64",
+  "gui.originsx_skilltree.picker.cat_all": "All items",
+  "gui.originsx_skilltree.picker.empty": "Nothing matches the search",
+  "gui.originsx_skilltree.picker.more": "... showing first %s matches, refine the search",
+  "gui.originsx_skilltree.picker.search": "Search..."
 }

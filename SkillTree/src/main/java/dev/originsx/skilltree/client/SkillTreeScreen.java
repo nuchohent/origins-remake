@@ -121,7 +121,7 @@ public final class SkillTreeScreen extends ModularUIScreen {
     private TextField fX;
     private TextField fY;
     private TextField fCosts;
-    private TextField fIcon;
+    private RegistryPicker fIcon;
     private TextField fName;
     private TextField fDesc;
     private TextField fRequires;
@@ -239,6 +239,31 @@ public final class SkillTreeScreen extends ModularUIScreen {
         updateDetail();
     }
 
+    // toast: transient on-screen notification (chat is not used on purpose)
+    private UIElement toastHost;
+    private Label toastLabel;
+    private long toastHideAtMs;
+    private boolean toastVisible;
+
+    private void showToast(String key) {
+        if (toastHost == null) {
+            return;
+        }
+        toastLabel.setText(Component.translatable(key));
+        toastHost.setDisplay(true);
+        toastVisible = true;
+        toastHideAtMs = System.currentTimeMillis() + 3000;
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (toastVisible && System.currentTimeMillis() > toastHideAtMs) {
+            toastVisible = false;
+            toastHost.setDisplay(false);
+        }
+    }
+
     private static UIElement createRoot() {
         var root = new UIElement();
         root.layout(l -> l.widthPercent(100).heightPercent(100).flexDirection(FlexDirection.COLUMN)
@@ -295,6 +320,19 @@ public final class SkillTreeScreen extends ModularUIScreen {
         root.addChild(canvasHost);
 
         buildDetailPanel(root);
+
+        // transient toast overlay (top strip), always on top of screen content
+        toastHost = new UIElement().layout(l -> l.positionType(TaffyPosition.ABSOLUTE)
+                .left(0).top(0).widthPercent(100).height(60)
+                .alignItems(AlignItems.CENTER).paddingAll(8));
+        toastHost.setDisplay(false);
+        toastLabel = new Label();
+        toastLabel.setText(Component.translatable("gui.originsx_skilltree.save.done"));
+        toastLabel.textStyle(style -> style.fontSize(10).textColor(0xFFDDDDDD).adaptiveWidth(true));
+        toastLabel.layout(l -> l.paddingAll(8));
+        toastLabel.style(s -> s.background(new ColorRectTexture(0xF022222A)));
+        toastHost.addChild(toastLabel);
+        root.addChild(toastHost);
     }
 
     private static UIElement separator() {
@@ -363,7 +401,9 @@ public final class SkillTreeScreen extends ModularUIScreen {
         fX = editorField("gui.originsx_skilltree.hint.px", v -> setInt("x", v));
         fY = editorField("gui.originsx_skilltree.hint.py", v -> setInt("y", v));
         fCosts = editorField("gui.originsx_skilltree.hint.costs", v -> setCosts(v));
-        fIcon = editorField("gui.originsx_skilltree.hint.icon", v -> setString("icon", v));
+        fIcon = new RegistryPicker(RegistryPicker.Kind.ITEM);
+        fIcon.setValue("", false);
+        fIcon.setOnValueChanged(v -> setString("icon", v));
         fName = editorField("gui.originsx_skilltree.field.name", v -> setPowerString("display_name", v));
         fDesc = editorField("gui.originsx_skilltree.field.desc", v -> setPowerString("description", v));
         fRequires = editorField("gui.originsx_skilltree.field.requires", v -> setRequires(v));
@@ -384,7 +424,13 @@ public final class SkillTreeScreen extends ModularUIScreen {
         editGroup.addChild(r1);
         var r2 = row();
         r2.addChild(labeledFieldFlex("gui.originsx_skilltree.field.name", fName));
-        r2.addChild(labeledFieldFlex("gui.originsx_skilltree.field.icon", fIcon));
+        var iconCol = new UIElement().layout(l -> l.flex(1)
+                .flexDirection(FlexDirection.COLUMN).gapAll(1)
+                .alignItems(AlignItems.STRETCH));
+        iconCol.addChild(fieldLabel("gui.originsx_skilltree.field.icon"));
+        fIcon.layout(l -> l.widthPercent(100).height(18));
+        iconCol.addChild(fIcon);
+        r2.addChild(iconCol);
         editGroup.addChild(r2);
         var r3 = row();
         r3.addChild(labeledFieldFlex("gui.originsx_skilltree.field.desc", fDesc));
@@ -1247,9 +1293,10 @@ public final class SkillTreeScreen extends ModularUIScreen {
         try {
             if (node == null) {
                 for (TextField field : List.of(fId, fIndex, fX, fY, fCosts,
-                        fIcon, fName, fDesc, fRequires, fPower)) {
+                        fName, fDesc, fRequires, fPower)) {
                     field.setText("");
                 }
+                fIcon.setValue("", false);
                 return;
             }
             fId.setText(node.get("id").getAsString());
@@ -1257,7 +1304,7 @@ public final class SkillTreeScreen extends ModularUIScreen {
             fX.setText(strOrEmpty(node, "x"));
             fY.setText(strOrEmpty(node, "y"));
             fCosts.setText(costsCsv(node));
-            fIcon.setText(str(node, "icon"));
+            fIcon.setValue(str(node, "icon"), false);
             fPower.setText(node.has("power")
                     ? node.getAsJsonObject("power").toString() : "{}");
             var power = node.has("power") ? node.getAsJsonObject("power") : new JsonObject();
@@ -1396,7 +1443,7 @@ public final class SkillTreeScreen extends ModularUIScreen {
         Minecraft mc = Minecraft.getInstance();
         MinecraftServer server = mc.getSingleplayerServer();
         if (server == null) {
-            message(mc, "gui.originsx_skilltree.save.singleplayer_only");
+            showToast("gui.originsx_skilltree.save.singleplayer_only");
             return;
         }
         if (editJson == null) {
@@ -1430,15 +1477,9 @@ public final class SkillTreeScreen extends ModularUIScreen {
             }
             server.execute(() -> server.getCommands().performPrefixedCommand(
                     server.createCommandSourceStack(), "reload"));
-            message(mc, "gui.originsx_skilltree.save.done");
+            showToast("gui.originsx_skilltree.save.done");
         } catch (Exception e) {
-            message(mc, "gui.originsx_skilltree.save.failed");
-        }
-    }
-
-    private static void message(Minecraft mc, String key) {
-        if (mc.player != null) {
-            mc.player.sendSystemMessage(Component.translatable(key));
+            showToast("gui.originsx_skilltree.save.failed");
         }
     }
 }

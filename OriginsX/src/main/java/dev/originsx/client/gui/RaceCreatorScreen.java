@@ -104,43 +104,42 @@ public final class RaceCreatorScreen {
         back.setOnClick(e -> OriginsXClient.openSelectionScreen());
         header.addChild(back);
 
-        var skillTreeButton = new Button();
-        skillTreeButton.setText("gui.originsx_skilltree.open_tree").layout(l -> l.height(20));
-        skillTreeButton.textStyle(s -> s.fontSize(10));
-        skillTreeButton.setOnClick(e -> {
-            var player = Minecraft.getInstance().player;
-            if (player == null) {
-                return;
-            }
-            if (!net.neoforged.fml.ModList.get().isLoaded("originsx_skilltree")) {
-                player.sendSystemMessage(
-                        Component.translatable("gui.originsx_skilltree.no_addon"));
-                return;
-            }
-            try {
-                // both mods share the game-content classloader, so the caller's
-                // own loader resolves the addon class; an explicit FML container
-                // loader here would be the boot-layer one and fail with CNFE
-                Class<?> client = Class.forName("dev.originsx.skilltree.client.SkillTreeClient");
-                try {
-                    client.getMethod("openEditor", String.class, String.class, Runnable.class)
-                            .invoke(null, creatorPanel.currentRaceId(),
-                                    creatorPanel.currentPowersJson(), returnToCreator);
-                } catch (NoSuchMethodException legacy) {
-                    // older addon without the return callback
-                    client.getMethod("openEditor", String.class, String.class)
-                            .invoke(null, creatorPanel.currentRaceId(),
-                                    creatorPanel.currentPowersJson());
+        // the tree editor button exists only while the addon is installed —
+        // a dead button that answers with a chat error is worse than none
+        if (net.neoforged.fml.ModList.get().isLoaded("originsx_skilltree")) {
+            var skillTreeButton = new Button();
+            skillTreeButton.setText("gui.originsx_skilltree.open_tree").layout(l -> l.height(20));
+            skillTreeButton.textStyle(s -> s.fontSize(10));
+            skillTreeButton.setOnClick(e -> {
+                var player = Minecraft.getInstance().player;
+                if (player == null) {
+                    return;
                 }
-            } catch (Throwable t) {
-                Throwable cause = t instanceof java.lang.reflect.InvocationTargetException ite
-                        ? ite.getCause() : t;
-                log.error("Failed to open skill tree editor", cause);
-                player.sendSystemMessage(Component.literal(
-                        "Skill tree error: " + cause).withStyle(net.minecraft.ChatFormatting.RED));
-            }
-        });
-        header.addChild(skillTreeButton);
+                try {
+                    // both mods share the game-content classloader, so the caller's
+                    // own loader resolves the addon class; an explicit FML container
+                    // loader here would be the boot-layer one and fail with CNFE
+                    Class<?> client = Class.forName("dev.originsx.skilltree.client.SkillTreeClient");
+                    try {
+                        client.getMethod("openEditor", String.class, String.class, Runnable.class)
+                                .invoke(null, creatorPanel.currentRaceId(),
+                                        creatorPanel.currentPowersJson(), returnToCreator);
+                    } catch (NoSuchMethodException legacy) {
+                        // older addon without the return callback
+                        client.getMethod("openEditor", String.class, String.class)
+                                .invoke(null, creatorPanel.currentRaceId(),
+                                        creatorPanel.currentPowersJson());
+                    }
+                } catch (Throwable t) {
+                    Throwable cause = t instanceof java.lang.reflect.InvocationTargetException ite
+                            ? ite.getCause() : t;
+                    log.error("Failed to open skill tree editor", cause);
+                    player.sendSystemMessage(Component.literal(
+                            "Skill tree error: " + cause).withStyle(net.minecraft.ChatFormatting.RED));
+                }
+            });
+            header.addChild(skillTreeButton);
+        }
 
         return header;
     }

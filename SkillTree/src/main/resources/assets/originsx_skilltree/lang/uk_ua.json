@@ -63,5 +63,9 @@
   "node.originsx_skilltree.dryad_purified.desc": "Чисте лісове повітря робить дерев'яну шкіру щільнішою.",
   "node.originsx_skilltree.dryad_regeneration": "Глибоке коріння",
   "node.originsx_skilltree.dryad_regeneration.desc": "Давнє коріння повільно затягує рани.",
-  "gui.originsx_skilltree.hint.py": "64"
+  "gui.originsx_skilltree.hint.py": "64",
+  "gui.originsx_skilltree.picker.cat_all": "Усі предмети",
+  "gui.originsx_skilltree.picker.empty": "Нічого не знайдено",
+  "gui.originsx_skilltree.picker.more": "... показано перші %s збігів, уточніть пошук",
+  "gui.originsx_skilltree.picker.search": "Пошук..."
 }
