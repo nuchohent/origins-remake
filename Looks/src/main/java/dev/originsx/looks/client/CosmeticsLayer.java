@@ -22,6 +22,8 @@ import net.neoforged.api.distmarker.OnlyIn;
 @OnlyIn(Dist.CLIENT)
 public final class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
 
+    private boolean loggedPIP;
+
     public CosmeticsLayer(RenderLayerParent<AvatarRenderState, PlayerModel> parent) {
         super(parent);
     }
@@ -30,8 +32,22 @@ public final class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerM
     public void submit(PoseStack poseStack, SubmitNodeCollector collector, int light,
                        AvatarRenderState state, float yRot, float xRot) {
         var extracted = state.getRenderData(LooksClient.RENDER_DATA);
-        if (extracted == null || extracted.isEmpty() || state.isInvisible) {
+        if (extracted == null || extracted.isEmpty()) {
+            if (!loggedPIP) {
+                loggedPIP = true;
+                dev.originsx.looks.LooksMod.LOGGER.info(
+                        "[Looks] CosmeticsLayer: RENDER_DATA null={}, empty={}",
+                        extracted == null, extracted != null && extracted.isEmpty());
+            }
             return;
+        }
+        if (state.isInvisible) {
+            return;
+        }
+        if (!loggedPIP) {
+            loggedPIP = true;
+            dev.originsx.looks.LooksMod.LOGGER.info(
+                    "[Looks] CosmeticsLayer: RENDER_DATA size={}", extracted.size());
         }
         PlayerModel model = getParentModel();
         for (CosmeticsStateModifier.Extracted data : extracted) {

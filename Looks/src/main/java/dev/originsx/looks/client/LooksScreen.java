@@ -125,9 +125,6 @@ public final class LooksScreen extends ModularUIScreen {
     private Button modeEntityBtn;
     private UIElement entityPickRow;
 
-    /** One-shot diagnostics of the viewport cosmetics data path. */
-    private static boolean loggedViewportProbe;
-
     // toast: transient on-screen notification (chat is not used on purpose)
     private UIElement toastHost;
     private Label toastLabel;
@@ -405,6 +402,8 @@ public final class LooksScreen extends ModularUIScreen {
      * every layer (cosmetics included) alive.
      */
     private final class ViewportTexture implements GuiTexture {
+        private int frameCount;
+
         @Override
         public void draw(GUIContext context, float x, float y, float width, float height) {
             var graphics = context.graphics;
@@ -421,7 +420,6 @@ public final class LooksScreen extends ModularUIScreen {
                 return;
             }
             try {
-                // vanilla InventoryScreen angle convention: 20 units per atan-step
                 float xAngle = vpYaw / 20f;
                 float yAngle = vpPitch / 20f;
                 Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI);
@@ -439,17 +437,7 @@ public final class LooksScreen extends ModularUIScreen {
                 }
                 if (renderState instanceof LivingEntityRenderState livingState) {
                     livingState.bodyRot = 180.0F + xAngle * 20.0F;
-                    // yRot is the HEAD-yaw RELATIVE to the body in 26.2
-                    // (LivingEntityRenderer.extractRenderState:
-                    // yRot = wrapDegrees(headRot - bodyRot); applied on top of
-                    // the body turn by HumanoidModel.setupAnim). Vanilla
-                    // inventory sets it non-zero so the head tracks the mouse
-                    // FASTER than the body — for a rigid editor preview it
-                    // must stay 0, or the head spins twice as fast.
                     livingState.yRot = 0.0F;
-                    // same for pitch: it is already applied to the WHOLE model
-                    // via the xRotation quaternion; a non-zero xRot would tilt
-                    // only the head a second time
                     livingState.xRot = 0.0F;
                     livingState.boundingBoxWidth =
                             livingState.boundingBoxWidth / livingState.scale;
@@ -457,29 +445,30 @@ public final class LooksScreen extends ModularUIScreen {
                             livingState.boundingBoxHeight / livingState.scale;
                     livingState.scale = 1.0F;
                 }
-                // vanilla shadow is built from shadowPieces that rotate with
-                // the body; clearing them + zeroing radius removes the split
                 renderState.shadowRadius = 0.0F;
                 renderState.shadowPieces.clear();
-                // manual render bypasses the render-feature phase where the
-                // NeoForge state modifier bakes cosmetics into the state —
-                // run the extraction here so the viewport preview is live
+
+                frameCount++;
                 if (renderState instanceof AvatarRenderState avatarState
                         && target instanceof net.minecraft.world.entity.Avatar avatar) {
                     var extracted = CosmeticsStateModifier.extract(avatar);
                     avatarState.setRenderData(LooksClient.RENDER_DATA, extracted);
-                    // one-shot diagnostics: proves whether the cosmetics data
-                    // reaches the PIP-rendered state (if items are still
-                    // invisible with size > 0 here, CosmeticsLayer.submit is
-                    // the broken link — its own log fires once)
-                    if (!loggedViewportProbe) {
-                        loggedViewportProbe = true;
+                    if (frameCount % 120 == 1 || !extracted.isEmpty()) {
                         dev.originsx.looks.LooksMod.LOGGER.info(
-                                "[Looks] viewport probe: renderer={}, extracted={}, hasData={}",
+                                "[Looks] viewport frame #{}: renderer={}, extracted={}, entries={}, targetClass={}",
+                                frameCount,
                                 renderer.getClass().getSimpleName(),
                                 extracted.size(),
-                                avatarState.getRenderData(LooksClient.RENDER_DATA) != null);
+                                entries.size(),
+                                target.getClass().getSimpleName());
                     }
+                } else if (frameCount % 120 == 1) {
+                    dev.originsx.looks.LooksMod.LOGGER.info(
+                            "[Looks] viewport frame #{}: isAvatar={}, isAvatarRTS={}, targetClass={}",
+                            frameCount,
+                            target instanceof net.minecraft.world.entity.Avatar,
+                            renderState instanceof AvatarRenderState,
+                            target.getClass().getSimpleName());
                 }
 
                 Vector3f translation = new Vector3f(0.0F,
@@ -489,7 +478,7 @@ public final class LooksScreen extends ModularUIScreen {
                         xRotation, x0, y0, x1, y1);
                 graphics.disableScissor();
             } catch (Exception e) {
-                dev.originsx.looks.LooksMod.LOGGER.debug("Viewport preview failed", e);
+                dev.originsx.looks.LooksMod.LOGGER.warn("Viewport preview failed", e);
             }
         }
     }
