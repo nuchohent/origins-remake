@@ -211,7 +211,7 @@ public final class LooksScreen extends ModularUIScreen {
 
         content.addChild(buildViewportColumn());
 
-        var right = new UIElement().layout(l -> l.width(400)
+        var right = new UIElement().layout(l -> l.flex(1).width(400)
                 .flexDirection(FlexDirection.COLUMN).gapAll(4));
         // cosmetics list
         var listPanel = new UIElement().layout(l -> l.flex(1).widthPercent(100));
@@ -251,7 +251,7 @@ public final class LooksScreen extends ModularUIScreen {
      * vanilla inventory-entity pipeline, so the cosmetics layer shows up live.
      */
     private UIElement buildViewportColumn() {
-        var col = new UIElement().layout(l -> l.width(320)
+        var col = new UIElement().layout(l -> l.flex(1)
                 .flexDirection(FlexDirection.COLUMN).gapAll(3));
 
         var modes = row();
