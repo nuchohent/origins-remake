@@ -860,7 +860,15 @@ public final class SkillTreeScreen extends ModularUIScreen {
         String powerJson = pickerPowers.get(idx);
         if (powerJson != null) {
             try {
-                node.add("power", JsonParser.parseString(powerJson));
+                var parsed = JsonParser.parseString(powerJson);
+                if (parsed.isJsonObject()) {
+                    // materialize: fill in every engine default so the author
+                    // sees (and can tweak) all parameters, not just the ones
+                    // the race author happened to write
+                    node.add("power", dev.raceapi.power.PowerSchemas.materialize(parsed.getAsJsonObject()));
+                } else {
+                    node.add("power", parsed);
+                }
             } catch (Exception ignored) {
             }
         }
