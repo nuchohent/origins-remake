@@ -372,6 +372,9 @@ public final class LooksScreen extends ModularUIScreen {
      * picked type purely for rendering; ignoreChecks bypasses the peaceful-
      * difficulty spawn gate so monsters can be previewed too.
      */
+    private static final java.util.concurrent.atomic.AtomicInteger ENTITY_ID_COUNTER =
+            new java.util.concurrent.atomic.AtomicInteger(2_000_000);
+
     private void recreatePreviewEntity(Minecraft mc) {
         LivingEntity created = null;
         try {
@@ -382,6 +385,9 @@ public final class LooksScreen extends ModularUIScreen {
             if (type != null && mc.level != null) {
                 Entity spawned = type.create(mc.level,
                         new EntitySpawnRequest(EntitySpawnReason.COMMAND, true));
+                if (spawned != null) {
+                    spawned.setId(ENTITY_ID_COUNTER.getAndIncrement());
+                }
                 if (spawned instanceof LivingEntity living) {
                     created = living;
                 }
@@ -453,7 +459,7 @@ public final class LooksScreen extends ModularUIScreen {
                         && target instanceof net.minecraft.world.entity.Avatar avatar) {
                     var extracted = CosmeticsStateModifier.extract(avatar);
                     avatarState.setRenderData(LooksClient.RENDER_DATA, extracted);
-                    if (frameCount % 120 == 1 || !extracted.isEmpty()) {
+                    if (frameCount % 300 == 1) {
                         dev.originsx.looks.LooksMod.LOGGER.info(
                                 "[Looks] viewport frame #{}: renderer={}, extracted={}, entries={}, targetClass={}",
                                 frameCount,
