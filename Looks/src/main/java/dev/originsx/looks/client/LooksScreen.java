@@ -304,16 +304,19 @@ public final class LooksScreen extends ModularUIScreen {
                 this::saveCosmetics);
         saveBtn.layout(l -> l.width(62).height(15));
         actions.addChild(saveBtn);
-        detailGroup.addChild(actions);
 
         Label hint = new Label();
         hint.setText(Component.translatable("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".edit_hint")
                 .withStyle(ChatFormatting.DARK_GRAY));
         hint.textStyle(style -> style.fontSize(8).textWrap(TextWrap.WRAP).adaptiveHeight(true));
         hint.layout(l -> l.widthPercent(100));
-        detailGroup.addChild(hint);
 
+        // actions live OUTSIDE detailGroup: with an empty list nothing is
+        // selected, and an add button hidden behind "has selection" is a
+        // deadlock — the row must stay visible at all times
         panel.addChild(detailGroup);
+        panel.addChild(actions);
+        panel.addChild(hint);
         return panel;
     }
 
