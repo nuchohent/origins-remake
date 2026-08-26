@@ -296,6 +296,7 @@
   "originsx.gui.delete.failed": "Could not delete this race.",
   "originsx.gui.difficulty": "Difficulty",
   "originsx.gui.edit": "Edit",
+  "originsx.gui.looks": "Looks",
   "originsx.gui.edit.failed": "Could not load this race for editing.",
   "originsx.gui.powers": "Powers",
   "originsx.gui.powers.active": "ACTIVE",

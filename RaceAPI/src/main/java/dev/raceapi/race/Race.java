@@ -93,4 +93,13 @@ public interface Race {
     default int getPowerCount() {
         return getPowers().size();
     }
+
+    /**
+     * The raw JSON this race was parsed from (datapack definitions only).
+     * Addons can read custom fields such as {@code "cosmetics"} from it.
+     * Java-registered races and unknown sources return an empty object.
+     */
+    default com.google.gson.JsonObject getSourceJson() {
+        return new com.google.gson.JsonObject();
+    }
 }

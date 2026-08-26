@@ -35,6 +35,8 @@ public final class SimpleRace implements Race {
     private boolean hidden;
     private Consumer<ServerPlayer> onSelect;
     private Consumer<ServerPlayer> onRemove;
+    @org.jetbrains.annotations.Nullable
+    private com.google.gson.JsonObject sourceJson;
 
     public SimpleRace(Identifier id) {
         this.id = id;
@@ -174,6 +176,16 @@ public final class SimpleRace implements Race {
 
     public SimpleRace onRemove(Consumer<ServerPlayer> onRemove) {
         this.onRemove = onRemove;
+        return this;
+    }
+
+    @Override
+    public com.google.gson.JsonObject getSourceJson() {
+        return sourceJson != null ? sourceJson : new com.google.gson.JsonObject();
+    }
+
+    public SimpleRace sourceJson(@org.jetbrains.annotations.Nullable com.google.gson.JsonObject sourceJson) {
+        this.sourceJson = sourceJson;
         return this;
     }
 }

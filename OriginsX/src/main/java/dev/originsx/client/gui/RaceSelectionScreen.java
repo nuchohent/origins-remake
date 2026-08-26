@@ -52,6 +52,9 @@ import java.util.stream.Stream;
 @OnlyIn(Dist.CLIENT)
 public final class RaceSelectionScreen {
 
+    private static final org.slf4j.Logger log =
+            org.slf4j.LoggerFactory.getLogger(RaceSelectionScreen.class);
+
     private static final Random RANDOM = new Random();
 
     private RaceSelectionScreen() {
@@ -347,6 +350,16 @@ public final class RaceSelectionScreen {
             deleteButton.textStyle(s -> s.fontSize(9));
             deleteButton.setOnClick(e -> deleteRace(race, customFile));
             actions.addChildren(editButton, exportButton, deleteButton);
+
+            // looks editor lives in an optional addon; a dead button would be
+            // worse than none
+            if (net.neoforged.fml.ModList.get().isLoaded("originsx_looks")) {
+                var looksButton = new Button();
+                looksButton.setText("originsx.gui.looks").layout(l -> l.flex(1).height(22));
+                looksButton.textStyle(s -> s.fontSize(9));
+                looksButton.setOnClick(e -> openLooksEditor(race.getId().toString()));
+                actions.addChild(looksButton);
+            }
         }
 
         panel.addChildren(header, difficultyRow, description, separator, powersCol, actions);
@@ -387,6 +400,25 @@ public final class RaceSelectionScreen {
             dir = dir.getParent();
         }
         return dir;
+    }
+
+    /**
+     * Opens the Looks appearance editor for a custom race via reflection —
+     * the addon is optional, so OriginsX must not hard-link its classes.
+     */
+    private static void openLooksEditor(String raceId) {
+        try {
+            // both mods share the game-content classloader (same pattern as
+            // the skill-tree button in RaceCreatorScreen)
+            Class<?> client = Class.forName("dev.originsx.looks.client.LooksClient");
+            client.getMethod("openEditor", String.class).invoke(null, raceId);
+        } catch (Throwable t) {
+            Throwable cause = t instanceof java.lang.reflect.InvocationTargetException ite
+                    ? ite.getCause() : t;
+            log.error("Failed to open looks editor", cause);
+            message(Component.literal("Looks error: " + cause)
+                    .withStyle(ChatFormatting.RED));
+        }
     }
 
     private static void editRace(Race race, Path file) {

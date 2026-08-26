@@ -223,9 +223,13 @@ public final class SkillTreeScreen extends ModularUIScreen {
         if (editorRaceId != null) {
             editMode = true;
             editJson = new JsonObject();
-            editJson.addProperty("race", editorRaceId);
-            editJson.addProperty("title", "");
-            editJson.add("nodes", new JsonArray());
+            editJson = loadExistingTree(editorRaceId);
+            if (editJson == null) {
+                editJson = new JsonObject();
+                editJson.addProperty("race", editorRaceId);
+                editJson.addProperty("title", "");
+                editJson.add("nodes", new JsonArray());
+            }
             reparseEditNodes();
             viewGroup.setDisplay(false);
             editGroup.setDisplay(true);
@@ -270,6 +274,50 @@ public final class SkillTreeScreen extends ModularUIScreen {
                 .gapAll(4).paddingAll(6).alignItems(AlignItems.STRETCH));
         ROOT_HOLDER.set(root);
         return root;
+    }
+
+    /**
+     * Loads the previously saved tree for this race (same location saveTree
+     * writes to, plus any other datapack that ships one), so re-opening the
+     * editor continues the existing tree instead of starting from scratch.
+     */
+    private JsonObject loadExistingTree(String raceId) {
+        Minecraft mc = Minecraft.getInstance();
+        var server = mc.getSingleplayerServer();
+        if (server == null || raceId == null || raceId.isEmpty()) {
+            return null;
+        }
+        Identifier race = Identifier.tryParse(raceId);
+        if (race == null) {
+            return null;
+        }
+        Path datapacks = server.getWorldPath(LevelResource.DATAPACK_DIR);
+        Path preferred = datapacks.resolve("originsx_skilltree_custom")
+                .resolve("data").resolve(race.getNamespace())
+                .resolve("skilltree").resolve(race.getPath() + ".json");
+        List<Path> candidates = new ArrayList<>();
+        candidates.add(preferred);
+        try (var walk = Files.walk(datapacks, 6)) {
+            walk.filter(p -> p.getFileName() != null
+                    && p.getFileName().toString().equals(race.getPath() + ".json")
+                    && p.getParent() != null && p.getParent().getFileName() != null
+                    && p.getParent().getFileName().toString().equals("skilltree")
+                    && p.getParent().getParent() != null && p.getParent().getParent().getFileName() != null
+                    && p.getParent().getParent().getFileName().toString().equals(race.getNamespace())
+                    && !p.equals(preferred))
+                    .forEach(candidates::add);
+        } catch (Exception ignored) {
+        }
+        for (Path candidate : candidates) {
+            try {
+                JsonObject tree = JsonParser.parseString(Files.readString(candidate)).getAsJsonObject();
+                if (tree.has("nodes") && tree.get("nodes").isJsonArray()) {
+                    return tree;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return null;
     }
 
     @Override
