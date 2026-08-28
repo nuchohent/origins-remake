@@ -16,14 +16,17 @@ public final class PlayerRaceClient {
     }
 
     public static void apply(String uuid, String raceId) {
+        if (uuid == null || uuid.isEmpty()) {
+            return;
+        }
         try {
+            UUID id = UUID.fromString(uuid);
             if (raceId == null || raceId.isEmpty()) {
-                RACES.remove(UUID.fromString(uuid));
+                RACES.remove(id);
             } else {
-                RACES.put(UUID.fromString(uuid), raceId);
+                RACES.put(id, raceId);
             }
         } catch (IllegalArgumentException ignored) {
-            // malformed uuid must never break the payload handler
         }
     }
 

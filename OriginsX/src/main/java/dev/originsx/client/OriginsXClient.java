@@ -340,9 +340,7 @@ public final class OriginsXClient {
                     if (wrapped instanceof dev.raceapi.power.HyperInertiaPower inertia) {
                         // acceleration only while a movement key is held, so
                         // releasing the keys lets friction stop the player
-                        var move = player.input.getMoveVector();
-                        boolean hasInput = player.input.hasForwardImpulse()
-                                || move.x != 0.0f || move.y != 0.0f;
+                        boolean hasInput = player.input.hasForwardImpulse();
                         inertia.applyClient(player, hasInput);
                     } else if (wrapped instanceof dev.raceapi.power.SpiderClimbPower climb) {
                         climb.applyClient(player);

@@ -5,6 +5,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.world.entity.Avatar;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -35,6 +36,11 @@ public final class CosmeticsStateModifier {
             public <T extends Avatar & net.minecraft.client.entity.ClientAvatarEntity> void accept(
                     T entity, net.minecraft.client.renderer.entity.state.AvatarRenderState state) {
                 state.setRenderData(LooksClient.RENDER_DATA, extract(entity));
+                // hide the local player's body while rendered as an entity form
+                // (EntityForm's RenderPlayerEvent.Pre cancels the submit on this flag)
+                boolean hide = entity == Minecraft.getInstance().player
+                        && EntityForm.isTransformed((net.minecraft.client.player.AbstractClientPlayer) entity);
+                state.setRenderData(EntityForm.HIDE_BODY, hide);
             }
         });
     }
@@ -72,7 +78,7 @@ public final class CosmeticsStateModifier {
     @Nullable
     private static Extracted bake(Cosmetics.Entry entry,
                                   ItemModelResolver resolver,
-                                  Avatar entity) {
+                                  LivingEntity entity) {
         try {
             ItemStackRenderState itemState = new ItemStackRenderState();
             // FIXED = the armor-stand/item-frame display; rot/scale in the entry
@@ -84,5 +90,30 @@ public final class CosmeticsStateModifier {
                     entry.stack().getItem(), e);
             return null;
         }
+    }
+
+    /**
+     * Public so the editor viewport can bake the current (possibly unsaved)
+     * entries onto an arbitrary preview entity — the viewport renders via
+     * {@code createRenderState} directly and never hits the registered avatar
+     * modifier, so without this the cosmetics would never appear in the preview.
+     */
+    public static List<Extracted> bake(List<Cosmetics.Entry> entries, LivingEntity entity) {
+        if (entity.isInvisible() || entity.isSpectator() || entries.isEmpty()) {
+            return List.of();
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) {
+            return List.of();
+        }
+        ItemModelResolver resolver = mc.getItemModelResolver();
+        List<Extracted> out = new ArrayList<>(entries.size());
+        for (Cosmetics.Entry entry : entries) {
+            Extracted extracted = bake(entry, resolver, entity);
+            if (extracted != null) {
+                out.add(extracted);
+            }
+        }
+        return out;
     }
 }

@@ -157,7 +157,7 @@ public final class RaceManager {
     }
 
     private static void applyRacePowers(ServerPlayer player, Race race) {
-        applyRaceScale(player, race.getScale());
+        applyRaceScale(player, isMorphRace(race) ? 1.0f : race.getScale());
         race.onSelect(player);
         for (Power power : PowerPipeline.effective(player, race)) {
             power.onAttach(player);
@@ -268,6 +268,17 @@ public final class RaceManager {
 
         // Reset fall distance
         player.fallDistance = 0.0f;
+    }
+
+    /**
+     * A "morph" race has a {@code model_entity} (a mob it transforms into).
+     * Such races keep a full normal player hitbox/playability (the mob's small
+     * size is purely visual, client-side), so the race's own {@code scale} is
+     * not applied server-side — otherwise the tiny hitbox causes the low
+     * friction / "slides on ice" physics glitch.
+     */
+    private static boolean isMorphRace(Race race) {
+        return race.getSourceJson().has("model_entity");
     }
 
     private static void applyRaceScale(ServerPlayer player, float scale) {

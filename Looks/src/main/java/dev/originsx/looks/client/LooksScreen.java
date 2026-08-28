@@ -90,6 +90,10 @@ public final class LooksScreen extends ModularUIScreen {
     private final List<Cosmetics.Entry> entries = new ArrayList<>();
     private Integer selected;
 
+    /** Race's bound entity model (full-transformation form), or null. */
+    @Nullable
+    private String modelEntityId;
+
     private Label raceLabel;
     private Label countLabel;
     private ScrollerView listScroller;
@@ -141,6 +145,10 @@ public final class LooksScreen extends ModularUIScreen {
         UIElement root = ROOT_HOLDER.get();
         ROOT_HOLDER.remove();
         populateRoot(root);
+        if (fEntityPicker != null && previewEntityId != null) {
+            // seed the entity picker with the race's bound form (set in loadExisting)
+            fEntityPicker.setValue(previewEntityId, false);
+        }
         rebuildList();
         fillFields();
         // publish BEFORE the first edit: without this the preview override is
@@ -185,6 +193,13 @@ public final class LooksScreen extends ModularUIScreen {
         var race = id == null ? null : dev.raceapi.race.RaceRegistry.getOrNull(id);
         if (race != null) {
             entries.addAll(LooksClient.ofRace(race));
+            Identifier model = LooksClient.modelEntityFor(race);
+            modelEntityId = model == null ? null : model.toString();
+            if (modelEntityId != null && BuiltInRegistries.ENTITY_TYPE.get(model) != null) {
+                // race is bound to an entity form: show it in the viewport by default
+                viewMode = MODE_ENTITY;
+                previewEntityId = modelEntityId;
+            }
         }
     }
 
@@ -195,6 +210,20 @@ public final class LooksScreen extends ModularUIScreen {
 
     private void publishPreview() {
         LooksClient.setPreview(raceId, entries);
+        // per-edit trace: confirms the override snapshot actually updates after
+        // each field change (the position-change disappearance is either a data
+        // flow bug here or a render-placement bug downstream)
+        Cosmetics.Entry e = selectedEntry();
+        String pos = e == null ? "-" : String.format("%.2f %.2f %.2f",
+                e.pos()[0], e.pos()[1], e.pos()[2]);
+        String rot = e == null ? "-" : String.format("%.1f %.1f %.1f",
+                e.rot()[0], e.rot()[1], e.rot()[2]);
+        dev.originsx.looks.LooksMod.LOGGER.info(
+                "[Looks] publishPreview entries={} selected={} part={} item={} pos=[{}] rot=[{}] scale={}",
+                entries.size(), selected,
+                e == null ? "-" : e.part().jsonName,
+                e == null ? "-" : BuiltInRegistries.ITEM.getKey(e.stack().getItem()).toString(),
+                pos, rot, e == null ? "-" : String.format("%.2f", e.scale()));
     }
 
     // ------------------------------------------------------------------
@@ -211,7 +240,7 @@ public final class LooksScreen extends ModularUIScreen {
 
         content.addChild(buildViewportColumn());
 
-        var right = new UIElement().layout(l -> l.flex(1).width(400)
+        var right = new UIElement().layout(l -> l.width(400)
                 .flexDirection(FlexDirection.COLUMN).gapAll(4));
         // cosmetics list
         var listPanel = new UIElement().layout(l -> l.flex(1).widthPercent(100));
@@ -389,6 +418,7 @@ public final class LooksScreen extends ModularUIScreen {
                     spawned.setId(ENTITY_ID_COUNTER.getAndIncrement());
                 }
                 if (spawned instanceof LivingEntity living) {
+                    EntityForm.registerCrownLayer(living);
                     created = living;
                 }
             }
@@ -408,7 +438,6 @@ public final class LooksScreen extends ModularUIScreen {
      * every layer (cosmetics included) alive.
      */
     private final class ViewportTexture implements GuiTexture {
-        private int frameCount;
 
         @Override
         public void draw(GUIContext context, float x, float y, float width, float height) {
@@ -454,27 +483,14 @@ public final class LooksScreen extends ModularUIScreen {
                 renderState.shadowRadius = 0.0F;
                 renderState.shadowPieces.clear();
 
-                frameCount++;
                 if (renderState instanceof AvatarRenderState avatarState
                         && target instanceof net.minecraft.world.entity.Avatar avatar) {
                     var extracted = CosmeticsStateModifier.extract(avatar);
                     avatarState.setRenderData(LooksClient.RENDER_DATA, extracted);
-                    if (frameCount % 300 == 1) {
-                        dev.originsx.looks.LooksMod.LOGGER.info(
-                                "[Looks] viewport frame #{}: renderer={}, extracted={}, entries={}, targetClass={}",
-                                frameCount,
-                                renderer.getClass().getSimpleName(),
-                                extracted.size(),
-                                entries.size(),
-                                target.getClass().getSimpleName());
-                    }
-                } else if (frameCount % 120 == 1) {
-                    dev.originsx.looks.LooksMod.LOGGER.info(
-                            "[Looks] viewport frame #{}: isAvatar={}, isAvatarRTS={}, targetClass={}",
-                            frameCount,
-                            target instanceof net.minecraft.world.entity.Avatar,
-                            renderState instanceof AvatarRenderState,
-                            target.getClass().getSimpleName());
+                } else if (viewMode == MODE_ENTITY
+                        && renderState instanceof LivingEntityRenderState livingState) {
+                    var extracted = CosmeticsStateModifier.bake(entries, target);
+                    livingState.setRenderData(LooksClient.RENDER_DATA, extracted);
                 }
 
                 Vector3f translation = new Vector3f(0.0F,
@@ -872,10 +888,11 @@ public final class LooksScreen extends ModularUIScreen {
                     vec(old.rot(), 2, value), Float.NaN);
             case "scale" -> {
                 try {
-                    updateSelected(null, null, null, null,
-                            Float.parseFloat(value.trim()));
+                    float parsed = Float.parseFloat(value.trim());
+                    if (parsed > 0.01f && parsed < 100f) {
+                        updateSelected(null, null, null, null, parsed);
+                    }
                 } catch (NumberFormatException ignored) {
-                    // keep last valid scale until the text parses again
                 }
             }
             default -> {
@@ -923,6 +940,10 @@ public final class LooksScreen extends ModularUIScreen {
     }
 
     private void closeWithoutSaving() {
+        if (previewEntity != null && !previewEntity.isRemoved()) {
+            previewEntity.discard();
+            previewEntity = null;
+        }
         LooksClient.clearPreviewFor(raceId);
         Minecraft.getInstance().setScreenAndShow(null);
     }
@@ -957,6 +978,14 @@ public final class LooksScreen extends ModularUIScreen {
                 root.remove("cosmetics");
             } else {
                 root.add("cosmetics", Cosmetics.toJson(entries));
+            }
+            // bind the race to the entity form chosen in the viewport (entity mode)
+            boolean entityForm = viewMode == MODE_ENTITY && previewEntityId != null
+                    && BuiltInRegistries.ENTITY_TYPE.get(Identifier.tryParse(previewEntityId)) != null;
+            if (entityForm) {
+                root.addProperty("model_entity", previewEntityId);
+            } else {
+                root.remove("model_entity");
             }
             Files.writeString(raceFile, PRETTY.toJson(root), StandardCharsets.UTF_8);
             server.execute(() -> server.getCommands().performPrefixedCommand(

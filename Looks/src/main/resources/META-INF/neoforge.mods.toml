@@ -45,3 +45,6 @@ type = "optional"
 versionRange = "*"
 ordering = "NONE"
 side = "BOTH"
+
+[[mixins]]
+config = "originsx_looks.mixins.json"
