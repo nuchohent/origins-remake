@@ -1,3 +1,34 @@
+## Версия Race API 1.0.1 + OriginsX 1.11.3 + SkillTree 1.5.0 + Looks 1.0.0-alpha (2026-08-29)
+
+**Бамп версий после закрытия аудита LOOKS и стабилизации сборки.**
+
+### Race API 1.0.1
+- Мажор-совместимый фикс: зависимость SkillTree синхронизирована (raceapi 0.5.0 → 1.0.0).
+
+### OriginsX 1.11.3
+- Починена сборка на NeoForge 26.2.0.67: `ClientInput.forwardImpulse`/`leftImpulse` → `hasForwardImpulse()`.
+
+### SkillTree 1.5.0
+- Синхронизирована зависимость `raceapi_version` 0.5.0 → 1.0.0. Совместимость с Race API 1.0.0+.
+
+### OriginsX Looks 1.0.0-alpha
+- **Аудит LOOKS закрыт** (15 находок из LOOKS_AUDIT_2026-08-27.md):
+  - Критичные: static метод в миксине, утечка WeakHashMap, race condition в `EntityForm` — исправлены
+  - Средние: `instanceof RenderLayerParent` check, валидация scale, throttle logging
+  - Мелкие: cleanup `loggedPIP`, previewEntity, uuid-check, frameCount, null-check
+- **Новые фичи:**
+  - Анимация косметики (`AnimConfig`: rotateSpeed, bobAmplitude, bobSpeed, pulseAmplitude)
+  - Part `CAPE` — плащ рендерится на спине
+  - `zIndex` — управление порядком слоёв
+  - Частицы + звук при морфе
+  - Поиск/фильтр, toggle видимости, auto-rotate вьюпорта
+  - Copy/Paste между расами
+  - Команда `/looks reload` и `/looks debug`
+- **Сборка:** пересобран на NeoForge 26.2.0.67, все модули компилируются и билдятся
+- **Требует:** Race API 1.0.0+, OriginsX 1.11.2+
+
+---
+
 # Журнал исправлений (PATCH LOG)
 
 ## РЕЛИЗ: Race API 1.0.0 + OriginsX 1.11.2 (release) (2026-08-25)
