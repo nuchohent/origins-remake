@@ -53,7 +53,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /**
@@ -128,6 +130,18 @@ public final class LooksScreen extends ModularUIScreen {
     private Button modeSlimBtn;
     private Button modeEntityBtn;
     private UIElement entityPickRow;
+    private Button autoRotateBtn;
+    private boolean autoRotate = false;
+
+    // Search & filter
+    private TextField fSearch;
+    private String searchFilter = "";
+
+    // Visibility toggles per part
+    private Set<Cosmetics.Part> visibleParts = new java.util.HashSet<>(java.util.Arrays.asList(Cosmetics.Part.values()));
+
+    // Clipboard for copy/paste between races
+    private static List<Cosmetics.Entry> clipboard;
 
     // toast: transient on-screen notification (chat is not used on purpose)
     private UIElement toastHost;
@@ -171,6 +185,17 @@ public final class LooksScreen extends ModularUIScreen {
         if (toastVisible && System.currentTimeMillis() > toastHideAtMs) {
             toastVisible = false;
             toastHost.setDisplay(false);
+        }
+        if (autoRotate && vpDragging) {
+            vpYaw += 0.5f;
+        }
+        updateAutoRotateButton();
+    }
+
+    private void updateAutoRotateButton() {
+        if (autoRotateBtn != null) {
+            autoRotateBtn.style(s -> s.background(new ColorRectTexture(
+                    autoRotate ? ROW_SELECTED : ROW_BG)));
         }
     }
 
@@ -245,6 +270,17 @@ public final class LooksScreen extends ModularUIScreen {
         // cosmetics list
         var listPanel = new UIElement().layout(l -> l.flex(1).widthPercent(100));
         listPanel.style(s -> s.background(new ColorRectTexture(PANEL_BG)));
+
+        // Search bar
+        fSearch = new TextField();
+        fSearch.layout(l -> l.widthPercent(100).height(18));
+        fSearch.setTextResponder(v -> {
+            searchFilter = v != null ? v.toLowerCase() : "";
+            rebuildList();
+        });
+        fSearch.textFieldStyle(s -> s.placeholder(Component.translatable("gui.search")));
+        listPanel.addChild(fSearch);
+
         listScroller = new ScrollerView();
         listScroller.layout(l -> l.flex(1).widthPercent(100));
         listScroller.viewContainer(view -> view.layout(l -> l.widthPercent(100)
@@ -292,6 +328,16 @@ public final class LooksScreen extends ModularUIScreen {
         modes.addChild(modeSlimBtn);
         modes.addChild(modeEntityBtn);
         col.addChild(modes);
+
+        autoRotateBtn = modeButton("gui.auto_rotate", -1);
+        autoRotateBtn.textStyle(s -> s.fontSize(8));
+        autoRotateBtn.layout(l -> l.flex(1).height(14));
+        autoRotateBtn.setOnClick(e -> {
+            autoRotate = !autoRotate;
+            updateAutoRotateButton();
+        });
+        col.addChild(autoRotateBtn);
+        updateAutoRotateButton();
 
         entityPickRow = new UIElement().layout(l -> l.widthPercent(100)
                 .flexDirection(FlexDirection.COLUMN).gapAll(1));
@@ -547,6 +593,30 @@ public final class LooksScreen extends ModularUIScreen {
         detailGroup = new UIElement().layout(l ->
                 l.widthPercent(100).flexDirection(FlexDirection.COLUMN).gapAll(3));
 
+        // Visibility toggles for each part
+        var visRow = row();
+        visRow.addChild(fieldLabelFixed("gui.visible_parts"));
+        for (Cosmetics.Part part : Cosmetics.Part.values()) {
+            Button toggle = new Button();
+            toggle.setText(part.jsonName).textStyle(s -> s.fontSize(7));
+            toggle.layout(l -> l.flex(1).height(14));
+            boolean visible = visibleParts.contains(part);
+            toggle.style(s -> s.background(new ColorRectTexture(
+                    visible ? ROW_SELECTED : ROW_BG)));
+            toggle.setOnClick(e -> {
+                if (visibleParts.contains(part)) {
+                    visibleParts.remove(part);
+                    toggle.style(s -> s.background(new ColorRectTexture(ROW_BG)));
+                } else {
+                    visibleParts.add(part);
+                    toggle.style(s -> s.background(new ColorRectTexture(ROW_SELECTED)));
+                }
+                rebuildList();
+            });
+            visRow.addChild(toggle);
+        }
+        detailGroup.addChild(visRow);
+
         // item + body part
         var r1 = row();
         var itemCol = new UIElement().layout(l -> l.flex(1)
@@ -625,6 +695,12 @@ public final class LooksScreen extends ModularUIScreen {
                 this::deleteSelected);
         deleteBtn.layout(l -> l.width(56).height(15));
         actions.addChild(deleteBtn);
+        Button copyBtn = smallButton("gui.copy", this::copySelected);
+        copyBtn.layout(l -> l.width(44).height(15));
+        actions.addChild(copyBtn);
+        Button pasteBtn = smallButton("gui.paste", this::pasteEntry);
+        pasteBtn.layout(l -> l.width(44).height(15));
+        actions.addChild(pasteBtn);
         Button saveBtn = smallButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".save",
                 this::saveCosmetics);
         saveBtn.layout(l -> l.width(62).height(15));
@@ -755,6 +831,13 @@ public final class LooksScreen extends ModularUIScreen {
             return;
         }
         for (int i = 0; i < entries.size(); i++) {
+            Cosmetics.Entry entry = entries.get(i);
+            boolean visible = visibleParts.contains(entry.part());
+            boolean matchesSearch = searchFilter.isEmpty()
+                    || entry.stack().getHoverName().getString().toLowerCase().contains(searchFilter)
+                    || entry.part().jsonName.contains(searchFilter)
+                    || BuiltInRegistries.ITEM.getKey(entry.stack().getItem()).toString().toLowerCase().contains(searchFilter);
+            if (!visible || !matchesSearch) continue;
             listScroller.addScrollViewChild(entryRow(i));
         }
     }
@@ -847,6 +930,35 @@ public final class LooksScreen extends ModularUIScreen {
         publishPreview();
         rebuildList();
         fillFields();
+    }
+
+    private void copySelected() {
+        Cosmetics.Entry entry = selectedEntry();
+        if (entry == null) return;
+        clipboard = List.of(entry);
+        showToast("gui.copied");
+    }
+
+    private void pasteEntry() {
+        if (clipboard == null || clipboard.isEmpty()) {
+            showToast("gui.clipboard_empty");
+            return;
+        }
+        Cosmetics.Entry copied = clipboard.get(0);
+        // deep copy
+        entries.add(new Cosmetics.Entry(
+                copied.part(),
+                copied.stack().copy(),
+                copied.pos().clone(),
+                copied.rot().clone(),
+                copied.scale(),
+                copied.anim(),
+                copied.zIndex()));
+        selected = entries.size() - 1;
+        publishPreview();
+        rebuildList();
+        fillFields();
+        showToast("gui.pasted");
     }
 
     /**

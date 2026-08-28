@@ -12,9 +12,12 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
+import java.util.Comparator;
+import java.util.List;
+
 /**
  * Draws the cosmetics of the rendered avatar: each entry is an item attached
- * to a player-model bone (head/body/arms/legs) with pos/rot/scale.
+ * to a player-model bone (head/body/arms/legs/cape) with pos/rot/scale + animation.
  * <p>
  * Runs on every player renderer (and mannequins), so cosmetics are visible to
  * everyone — other players' races arrive via the race broadcast payload.
@@ -37,6 +40,11 @@ public final class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerM
 
     /** Model units the head bone pivot is below the crown (skull is ~8 px tall). */
     private static final float HEAD_BASE_LIFT = 6f;
+
+    /** Cape offset from body bone (back, slightly above waist). */
+    private static final float CAPE_OFFSET_X = 0f;
+    private static final float CAPE_OFFSET_Y = -0.25f;
+    private static final float CAPE_OFFSET_Z = 0.1f;
 
     private static float getDebugOffset() {
         try {
@@ -64,13 +72,20 @@ public final class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerM
         if (model == null) {
             return;
         }
-        for (CosmeticsStateModifier.Extracted data : extracted) {
+        // Sort by zIndex so lower layers render first (underneath)
+        List<CosmeticsStateModifier.Extracted> sorted = extracted.stream()
+                .sorted(Comparator.comparingInt(e -> e.entry().zIndex()))
+                .toList();
+        for (CosmeticsStateModifier.Extracted data : sorted) {
+            if (data.entry().part() == Cosmetics.Part.CAPE) {
+                renderCape(poseStack, collector, light, data, state);
+                continue;
+            }
             ModelPart bone = bone(model, data.entry().part());
             if (bone == null) {
                 continue;
             }
             poseStack.pushPose();
-            // follow the bone, including head pitch/yaw and walk animation
             bone.translateAndRotate(poseStack);
             applyTransform(poseStack, data.entry());
             data.itemState().submit(poseStack, collector, light,
@@ -79,19 +94,26 @@ public final class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerM
         }
     }
 
+    private void renderCape(PoseStack poseStack, SubmitNodeCollector collector, int light,
+                             CosmeticsStateModifier.Extracted data, AvatarRenderState state) {
+        poseStack.pushPose();
+        // Cape attaches to body bone - translate to the back
+        poseStack.translate(CAPE_OFFSET_X * PX_PER_UNIT, CAPE_OFFSET_Y * PX_PER_UNIT, CAPE_OFFSET_Z * PX_PER_UNIT);
+        applyTransform(poseStack, data.entry());
+        data.itemState().submit(poseStack, collector, light,
+                OverlayTexture.NO_OVERLAY, state.outlineColor);
+        poseStack.popPose();
+    }
+
     /**
      * Entry transform in model space:
      * pos is in blocks from the bone anchor (x16), rot are XYZ degrees
      * applied X then Y then Z, scale multiplies afterwards.
+     * Animation (bob/rotate/pulse) applied on top.
      */
     private static void applyTransform(PoseStack poseStack, Cosmetics.Entry entry) {
         float[] pos = entry.pos();
-        // diagnosis probe: -Dlooks.debugRenderOffset=<blocks> lifts every cosmetic
-        // by that amount so a hidden-in-geometry item becomes visible in open air,
-        // telling data-flow apart from render-placement
         float lift = DEBUG_RENDER_OFFSET
-                // head bone pivot sits inside the skull/neck; push head items up
-                // to the crown so a mounted item starts on the surface, not buried
                 + (entry.part() == Cosmetics.Part.HEAD ? HEAD_BASE_LIFT : 0f);
         poseStack.translate(pos[0] * PX_PER_UNIT, -pos[1] * PX_PER_UNIT + lift,
                 pos[2] * PX_PER_UNIT);
@@ -99,6 +121,30 @@ public final class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerM
         poseStack.mulPose(Axis.XP.rotationDegrees(rot[0]));
         poseStack.mulPose(Axis.YP.rotationDegrees(rot[1]));
         poseStack.mulPose(Axis.ZP.rotationDegrees(rot[2]));
+
+        // Animation transforms
+        Cosmetics.AnimConfig anim = entry.anim();
+        if (anim.isAnimated()) {
+            float time = System.currentTimeMillis() / 1000.0f;
+
+            // Rotate around Y
+            if (anim.rotateSpeed() != 0f) {
+                poseStack.mulPose(Axis.YP.rotationDegrees(time * anim.rotateSpeed()));
+            }
+
+            // Bob up/down
+            if (anim.bobAmplitude() != 0f && anim.bobSpeed() != 0f) {
+                float bobY = (float)(Math.sin(time * anim.bobSpeed()) * anim.bobAmplitude());
+                poseStack.translate(0, bobY, 0);
+            }
+
+            // Pulse scale (subtle size oscillation)
+            if (anim.pulseAmplitude() != 0f) {
+                float pulse = 1.0f + (float)(Math.sin(time * anim.bobSpeed()) * anim.pulseAmplitude()) * 0.05f;
+                poseStack.scale(pulse, pulse, pulse);
+            }
+        }
+
         float scale = entry.scale() <= 0f ? 1f : entry.scale();
         poseStack.scale(scale, scale, scale);
     }
@@ -111,6 +157,7 @@ public final class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerM
             case RIGHT_ARM -> model.rightArm;
             case LEFT_LEG -> model.leftLeg;
             case RIGHT_LEG -> model.rightLeg;
+            case CAPE -> null; // cape has no bone, renders via offset
         };
     }
 }

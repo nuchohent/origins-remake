@@ -31,5 +31,14 @@
   "gui.originsx_looks.viewport.player": "Гравець",
   "gui.originsx_looks.viewport.slim": "Стрункий",
   "gui.originsx_looks.viewport.entity": "Сутність",
-  "gui.originsx_looks.viewport.model_hint": "прев'ю моделі"
+  "gui.originsx_looks.viewport.model_hint": "прев'ю моделі",
+  "gui.originsx_looks.copy": "Копіювати",
+  "gui.originsx_looks.paste": "Вставити",
+  "gui.originsx_looks.copied": "Скопійовано в буфер",
+  "gui.originsx_looks.pasted": "Вставлено з буфера",
+  "gui.originsx_looks.clipboard_empty": "Буфер порожній",
+  "gui.visible_parts": "Вид:",
+  "gui.auto_rotate": "Автоповорот",
+  "gui.search": "Пошук...",
+  "gui.originsx_looks.part.cape": "Кам"
 }

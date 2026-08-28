@@ -35,7 +35,8 @@ public final class Cosmetics {
         LEFT_ARM("left_arm"),
         RIGHT_ARM("right_arm"),
         LEFT_LEG("left_leg"),
-        RIGHT_LEG("right_leg");
+        RIGHT_LEG("right_leg"),
+        CAPE("cape");
 
         public final String jsonName;
 
@@ -58,12 +59,33 @@ public final class Cosmetics {
         }
     }
 
-    /** One attached cosmetic: item + bone + transform. */
-    public record Entry(Part part, ItemStack stack, float[] pos, float[] rot, float scale) {
+    /** Animation configuration for a cosmetic entry. */
+    public record AnimConfig(float rotateSpeed, float bobAmplitude, float bobSpeed, float pulseAmplitude) {
+        public static final AnimConfig DEFAULT = new AnimConfig(0f, 0f, 0f, 0f);
+
+        public boolean isAnimated() {
+            return rotateSpeed != 0f || bobAmplitude != 0f || bobSpeed != 0f || pulseAmplitude != 0f;
+        }
+    }
+
+    /** One attached cosmetic: item + bone + transform + animation. */
+    public record Entry(Part part, ItemStack stack, float[] pos, float[] rot, float scale,
+                        AnimConfig anim, int zIndex) {
+
+        public Entry {
+            if (anim == null) anim = AnimConfig.DEFAULT;
+            if (zIndex < Integer.MIN_VALUE) zIndex = 0;
+        }
 
         public Entry with(Part newPart, ItemStack newStack,
-                          float[] newPos, float[] newRot, float newScale) {
-            return new Entry(newPart, newStack, newPos, newRot, newScale);
+                          float[] newPos, float[] newRot, float newScale,
+                          AnimConfig newAnim, int newZIndex) {
+            return new Entry(newPart, newStack, newPos, newRot, newScale, newAnim, newZIndex);
+        }
+
+        /** Legacy constructor without anim/zIndex (backward compat). */
+        public Entry(Part part, ItemStack stack, float[] pos, float[] rot, float scale) {
+            this(part, stack, pos, rot, scale, AnimConfig.DEFAULT, 0);
         }
     }
 
@@ -81,6 +103,17 @@ public final class Cosmetics {
             json.add("pos", floats(entry.pos()));
             json.add("rot", floats(entry.rot()));
             json.addProperty("scale", round2(entry.scale()));
+            if (entry.anim().isAnimated()) {
+                JsonObject anim = new JsonObject();
+                if (entry.anim().rotateSpeed() != 0f) anim.addProperty("rotateSpeed", round2(entry.anim().rotateSpeed()));
+                if (entry.anim().bobAmplitude() != 0f) anim.addProperty("bobAmplitude", round2(entry.anim().bobAmplitude()));
+                if (entry.anim().bobSpeed() != 0f) anim.addProperty("bobSpeed", round2(entry.anim().bobSpeed()));
+                if (entry.anim().pulseAmplitude() != 0f) anim.addProperty("pulseAmplitude", round2(entry.anim().pulseAmplitude()));
+                json.add("anim", anim);
+            }
+            if (entry.zIndex() != 0) {
+                json.addProperty("zIndex", entry.zIndex());
+            }
             array.add(json);
         }
         return array;
@@ -109,14 +142,30 @@ public final class Cosmetics {
             if (part == null) {
                 continue;
             }
+            AnimConfig anim = parseAnim(json);
+            int zIndex = json.has("zIndex") ? json.get("zIndex").getAsInt() : 0;
             entries.add(new Entry(
                     part,
                     new ItemStack(item),
                     vecOr(json, "pos", new float[]{0f, 0f, 0f}),
                     vecOr(json, "rot", new float[]{0f, 0f, 0f}),
-                    floatOr(json, "scale", 1.0f)));
+                    floatOr(json, "scale", 1.0f),
+                    anim,
+                    zIndex));
         }
         return entries;
+    }
+
+    private static AnimConfig parseAnim(JsonObject json) {
+        if (!json.has("anim") || !json.get("anim").isJsonObject()) {
+            return AnimConfig.DEFAULT;
+        }
+        JsonObject anim = json.getAsJsonObject("anim");
+        float rotateSpeed = floatOr(anim, "rotateSpeed", 0f);
+        float bobAmplitude = floatOr(anim, "bobAmplitude", 0f);
+        float bobSpeed = floatOr(anim, "bobSpeed", 0f);
+        float pulseAmplitude = floatOr(anim, "pulseAmplitude", 0f);
+        return new AnimConfig(rotateSpeed, bobAmplitude, bobSpeed, pulseAmplitude);
     }
 
     private static JsonArray floats(float[] values) {

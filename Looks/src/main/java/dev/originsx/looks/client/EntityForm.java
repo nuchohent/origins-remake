@@ -4,7 +4,10 @@ import dev.originsx.looks.LooksMod;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.Identifier;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
@@ -233,6 +236,8 @@ public final class EntityForm {
                 mob.setNoAi(true);
             }
             level.addEntity(living);
+            spawnMorphParticles(level, living.getX(), living.getY(), living.getZ());
+            playMorphSound(level, living);
             return living;
         } catch (Exception e) {
             LooksMod.LOGGER.warn("Failed to create entity-form ghost {}", type, e);
@@ -243,12 +248,31 @@ public final class EntityForm {
     private static void discardGhost() {
         if (ghost != null) {
             if (!ghost.isRemoved()) {
+                spawnMorphParticles(ghost.level(), ghost.getX(), ghost.getY(), ghost.getZ());
                 ghost.discard();
             }
             ghost = null;
         }
         currentType = null;
         currentHeight = 0f;
+    }
+
+    private static void spawnMorphParticles(net.minecraft.world.level.Level level, double x, double y, double z) {
+        if (!(level instanceof ClientLevel cl)) return;
+        var rnd = new java.util.Random();
+        for (int i = 0; i < 20; i++) {
+            double dx = rnd.nextGaussian() * 0.4;
+            double dy = rnd.nextDouble() * 0.6;
+            double dz = rnd.nextGaussian() * 0.4;
+            cl.addParticle(net.minecraft.core.particles.ParticleTypes.SPLASH, x, y, z, dx, dy, dz);
+        }
+    }
+
+    private static void playMorphSound(net.minecraft.world.level.Level level, net.minecraft.world.entity.LivingEntity entity) {
+        if (!(level instanceof ClientLevel cl)) return;
+        cl.playLocalSound(entity.getX(), entity.getY(), entity.getZ(),
+                net.minecraft.sounds.SoundEvents.PLAYER_BURP,
+                net.minecraft.sounds.SoundSource.PLAYERS, 0.5f, 1.0f, false);
     }
 
     /**

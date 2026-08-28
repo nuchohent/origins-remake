@@ -124,6 +124,7 @@ public final class EntityCrownLayer<S extends LivingEntityRenderState, M extends
             case RIGHT_ARM -> new float[]{w * 0.85f, h * 0.5f, 0f};
             case LEFT_LEG -> new float[]{-w * 0.7f, h * 0.14f, 0f};
             case RIGHT_LEG -> new float[]{w * 0.7f, h * 0.14f, 0f};
+            case CAPE -> new float[]{0f, h * 0.45f, 0f};
         };
     }
 }

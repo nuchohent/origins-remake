@@ -31,5 +31,14 @@
   "gui.originsx_looks.viewport.player": "Player",
   "gui.originsx_looks.viewport.slim": "Slim",
   "gui.originsx_looks.viewport.entity": "Entity",
-  "gui.originsx_looks.viewport.model_hint": "model preview"
+  "gui.originsx_looks.viewport.model_hint": "model preview",
+  "gui.originsx_looks.copy": "Copy",
+  "gui.originsx_looks.paste": "Paste",
+  "gui.originsx_looks.copied": "Copied to clipboard",
+  "gui.originsx_looks.pasted": "Pasted from clipboard",
+  "gui.originsx_looks.clipboard_empty": "Clipboard is empty",
+  "gui.visible_parts": "Visible:",
+  "gui.auto_rotate": "Auto-rotate",
+  "gui.search": "Search...",
+  "gui.originsx_looks.part.cape": "Cape"
 }
