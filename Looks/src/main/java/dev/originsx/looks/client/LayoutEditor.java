@@ -25,7 +25,6 @@ import net.minecraft.network.chat.Component;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Vector3f;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -225,9 +224,10 @@ public final class LayoutEditor {
     // ------------------------------------------------------------------
 
     private boolean insideRect(UIElement el, float px, float py) {
-        Vector3f local = el.getWorldToLocalPose().transform(new Vector3f(px, py, 0.0f));
-        return local.x >= 0 && local.x <= el.getSizeWidth()
-                && local.y >= 0 && local.y <= el.getSizeHeight();
+        // getPositionX/Y are the screen-absolute boxes the renderer actually
+        // draws at (getLocalToWorldPose only carries Transform2D, not layout).
+        return px >= el.getPositionX() && px <= el.getPositionX() + el.getSizeWidth()
+                && py >= el.getPositionY() && py <= el.getPositionY() + el.getSizeHeight();
     }
 
     private boolean insideToolbar(float px, float py) {
@@ -243,9 +243,20 @@ public final class LayoutEditor {
         return hitTestRec(root, px, py);
     }
 
+    /** True when the element sits inside the editor overlay (toolbar/nameTag). */
+    private boolean insideOverlay(@Nullable UIElement el) {
+        while (el != null) {
+            if (el == overlay) {
+                return true;
+            }
+            el = el.getParent();
+        }
+        return false;
+    }
+
     @Nullable
     private UIElement hitTestRec(UIElement el, float px, float py) {
-        if (el == overlay) {
+        if (el == overlay || insideOverlay(el)) {
             return null;
         }
         if (el == root) {
@@ -312,9 +323,8 @@ public final class LayoutEditor {
         } else {
             resizing = false;
             moveParent = selected.getParent();
-            Vector3f screenOrigin = selected.getLocalToWorldPose().transform(new Vector3f());
-            startScreenX = screenOrigin.x;
-            startScreenY = screenOrigin.y;
+            startScreenX = selected.getPositionX();
+            startScreenY = selected.getPositionY();
         }
         dragging = true;
         dragStartX = px;
@@ -325,11 +335,12 @@ public final class LayoutEditor {
         if (selected == null) {
             return false;
         }
-        Vector3f origin = selected.getLocalToWorldPose().transform(new Vector3f());
+        float px0 = selected.getPositionX();
+        float py0 = selected.getPositionY();
         float w = selected.getSizeWidth();
         float h = selected.getSizeHeight();
-        return px >= origin.x + w - RESIZE_GRIP && px <= origin.x + w
-                && py >= origin.y + h - RESIZE_GRIP && py <= origin.y + h;
+        return px >= px0 + w - RESIZE_GRIP && px <= px0 + w
+                && py >= py0 + h - RESIZE_GRIP && py <= py0 + h;
     }
 
     private void onMouseMove(UIEvent event) {
@@ -350,9 +361,10 @@ public final class LayoutEditor {
                 // work fully in screen space, then project back into the parent's
                 // local space so widgets inside scrolled/translated containers pin correctly
                 UIElement parent = moveParent != null ? moveParent : selected.getParent();
-                Vector3f target = parent.getWorldToLocalPose()
-                        .transform(new Vector3f(startScreenX + dx, startScreenY + dy, 0.0f));
-                setPinnedPosition(selected, target.x, target.y);
+                float parentX = parent == null ? 0 : parent.getPositionX();
+                float parentY = parent == null ? 0 : parent.getPositionY();
+                setPinnedPosition(selected, startScreenX + dx - parentX,
+                        startScreenY + dy - parentY);
             }
             root.clearLayoutCache();
         } else {
@@ -584,14 +596,14 @@ if (selected == null) {
             nameTag.setDisplay(false);
             return;
         }
-        Vector3f origin = selected.getLocalToWorldPose().transform(new Vector3f());
-        Vector3f local = overlay.getWorldToLocalPose().transform(origin);
+        // overlay fills the whole screen at (0,0), so the element's screen-absolute
+        // position IS its overlay-local position here
         float w = selected.getSizeWidth();
         float h = selected.getSizeHeight();
-        float tx = local.x;
-        float ty = local.y - 14;
+        float tx = selected.getPositionX();
+        float ty = selected.getPositionY() - 14;
         if (ty < 2) {
-            ty = local.y + h + 2;
+            ty = selected.getPositionY() + h + 2;
         }
         final float fx = tx;
         final float fy = ty;
@@ -639,27 +651,24 @@ if (selected == null) {
                 return;
             }
             var graphics = context.graphics;
-            Vector3f base = overlay.getLocalToWorldPose().transform(new Vector3f(x, y, 0.0f));
             if (hovered != null && hovered != selected) {
-                drawBox(graphics, hovered, base, 0x55FFFFFF);
+                drawBox(graphics, hovered, 0x55FFFFFF);
             }
             for (UIElement el : pinned) {
-                drawBox(graphics, el, base, 0x8855CCFF);
+                drawBox(graphics, el, 0x8855CCFF);
             }
             if (selected != null) {
-                drawBox(graphics, selected, base, 0xFF55CCFF);
-                Vector3f o = selected.getLocalToWorldPose().transform(new Vector3f());
-                float gx = o.x - base.x + selected.getSizeWidth() - RESIZE_GRIP;
-                float gy = o.y - base.y + selected.getSizeHeight() - RESIZE_GRIP;
+                drawBox(graphics, selected, 0xFF55CCFF);
+                float gx = selected.getPositionX() + selected.getSizeWidth() - RESIZE_GRIP;
+                float gy = selected.getPositionY() + selected.getSizeHeight() - RESIZE_GRIP;
                 graphics.fill(Math.round(gx), Math.round(gy),
                         Math.round(gx + RESIZE_GRIP), Math.round(gy + RESIZE_GRIP), 0xFF00DDFF);
             }
         }
 
-        private void drawBox(GuiGraphicsExtractor graphics, UIElement el, Vector3f base, int color) {
-            Vector3f origin = el.getLocalToWorldPose().transform(new Vector3f());
-            float l = origin.x - base.x;
-            float t = origin.y - base.y;
+        private void drawBox(GuiGraphicsExtractor graphics, UIElement el, int color) {
+            float l = el.getPositionX();
+            float t = el.getPositionY();
             float r = l + el.getSizeWidth();
             float b = t + el.getSizeHeight();
             int li = Math.round(l), ti = Math.round(t), ri = Math.round(r), bi = Math.round(b);
