@@ -70,7 +70,10 @@ public final class LooksScreen extends ModularUIScreen {
     /** Palette matching OriginsX 1.4.0 (dark blue-tinted surfaces). */
     private static final int PANEL_BG = 0xFF22222A;
     private static final int ROW_BG = 0xFF2E2E38;
-    private static final int ROW_SELECTED = 0xFF7A5A20;
+    private static final int ACCENT = 0xFF2F6FA8;
+    private static final int ROW_SELECTED = 0xFF2F6FA8;
+    private static final int HEADER_BG = 0xFF3A3A44;
+    private static final int SECTION_BG = 0xFF2B2B34;
     private static final int LINE_LOCKED = 0xFF666666;
 
     private static final Gson PRETTY = new GsonBuilder()
@@ -132,6 +135,7 @@ public final class LooksScreen extends ModularUIScreen {
     private UIElement entityPickRow;
     private Button autoRotateBtn;
     private boolean autoRotate = false;
+    private Label viewStatus;
 
     // Search & filter
     private TextField fSearch;
@@ -186,10 +190,14 @@ public final class LooksScreen extends ModularUIScreen {
             toastVisible = false;
             toastHost.setDisplay(false);
         }
-        if (autoRotate && vpDragging) {
-            vpYaw += 0.5f;
+        if (autoRotate && !vpDragging) {
+            vpYaw = wrapYaw(vpYaw + 0.6f);
         }
         updateAutoRotateButton();
+        if (viewStatus != null) {
+            viewStatus.setText(Component.literal(String.format("Yaw %.0f  Pitch %.0f  Zoom %.0f",
+                    vpYaw, vpPitch, vpZoom)));
+        }
     }
 
     private void updateAutoRotateButton() {
@@ -259,37 +267,14 @@ public final class LooksScreen extends ModularUIScreen {
         root.addChild(header());
         root.addChild(separator());
 
-        // content row: 3D viewport on the left, list + editor on the right
+        // Blender-style workspace: outliner (list) on the left, the 3D
+        // viewport centered and the properties editor on the right
         var content = new UIElement().layout(l -> l.flex(1).widthPercent(100)
                 .flexDirection(FlexDirection.ROW).gapAll(4));
 
+        content.addChild(buildListPanel());
         content.addChild(buildViewportColumn());
-
-        var right = new UIElement().layout(l -> l.width(400)
-                .flexDirection(FlexDirection.COLUMN).gapAll(4));
-        // cosmetics list
-        var listPanel = new UIElement().layout(l -> l.flex(1).widthPercent(100));
-        listPanel.style(s -> s.background(new ColorRectTexture(PANEL_BG)));
-
-        // Search bar
-        fSearch = new TextField();
-        fSearch.layout(l -> l.widthPercent(100).height(18));
-        fSearch.setTextResponder(v -> {
-            searchFilter = v != null ? v.toLowerCase() : "";
-            rebuildList();
-        });
-        fSearch.textFieldStyle(s -> s.placeholder(Component.translatable("gui.search")));
-        listPanel.addChild(fSearch);
-
-        listScroller = new ScrollerView();
-        listScroller.layout(l -> l.flex(1).widthPercent(100));
-        listScroller.viewContainer(view -> view.layout(l -> l.widthPercent(100)
-                .flexDirection(FlexDirection.COLUMN).gapAll(1)));
-        listPanel.addChild(listScroller);
-        right.addChild(listPanel);
-
-        right.addChild(buildEditor());
-        content.addChild(right);
+        content.addChild(buildEditorPanel());
         root.addChild(content);
 
         // transient toast overlay (top strip), always on top of screen content
@@ -315,34 +300,81 @@ public final class LooksScreen extends ModularUIScreen {
      * preview panel below. The panel renders the local player through the
      * vanilla inventory-entity pipeline, so the cosmetics layer shows up live.
      */
+    private UIElement buildListPanel() {
+        var panel = new UIElement().layout(l -> l.width(170)
+                .flexDirection(FlexDirection.COLUMN).gapAll(2));
+        panel.style(s -> s.background(new ColorRectTexture(PANEL_BG)));
+
+        // Blender outliner header: title + item count
+        var head = new UIElement().layout(l -> l.widthPercent(100).height(16)
+                .flexDirection(FlexDirection.ROW).gapAll(4).paddingAll(2)
+                .alignItems(AlignItems.CENTER));
+        head.style(s -> s.background(new ColorRectTexture(HEADER_BG)));
+        var headTitle = new Label();
+        headTitle.setText(Component.translatable("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".list"));
+        headTitle.textStyle(style -> style.fontSize(8).textColor(0xFFDDDDDD).adaptiveWidth(true));
+        head.addChild(headTitle);
+        countLabel = new Label();
+        countLabel.textStyle(style -> style.fontSize(8).textColor(0xFF9A9AA0).adaptiveWidth(true));
+        countLabel.layout(l -> l.flex(1));
+        head.addChild(countLabel);
+        panel.addChild(head);
+
+        fSearch = new TextField();
+        fSearch.layout(l -> l.widthPercent(100).height(16));
+        fSearch.setTextResponder(v -> {
+            searchFilter = v != null ? v.toLowerCase() : "";
+            rebuildList();
+        });
+        fSearch.textFieldStyle(s -> s.placeholder(Component.translatable("gui.search")));
+        panel.addChild(fSearch);
+
+        listScroller = new ScrollerView();
+        listScroller.layout(l -> l.flex(1).widthPercent(100));
+        listScroller.viewContainer(view -> view.layout(l -> l.widthPercent(100)
+                .flexDirection(FlexDirection.COLUMN).gapAll(1)));
+        panel.addChild(listScroller);
+        return panel;
+    }
+
+    /**
+     * Center editor: the 3D viewport with a Blender-style header strip
+     * (mode tabs + auto-rotate toggle) above it and a tiny status bar below.
+     */
     private UIElement buildViewportColumn() {
-        var col = new UIElement().layout(l -> l.flex(1)
+        var col = new UIElement().layout(l -> l.flex(1).minWidth(120)
                 .flexDirection(FlexDirection.COLUMN).gapAll(3));
 
-        var modes = row();
+        var vpHeader = new UIElement().layout(l -> l.widthPercent(100).height(18)
+                .flexDirection(FlexDirection.ROW).gapAll(4).paddingAll(2)
+                .alignItems(AlignItems.CENTER));
+        vpHeader.style(s -> s.background(new ColorRectTexture(HEADER_BG)));
+
         modePlayerBtn = modeButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".viewport.player", MODE_PLAYER);
         modeSlimBtn = modeButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".viewport.slim", MODE_SLIM);
         modeEntityBtn = modeButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".viewport.entity", MODE_ENTITY);
         updateModeButtons();
-        modes.addChild(modePlayerBtn);
-        modes.addChild(modeSlimBtn);
-        modes.addChild(modeEntityBtn);
-        col.addChild(modes);
+        vpHeader.addChild(modePlayerBtn);
+        vpHeader.addChild(modeSlimBtn);
+        vpHeader.addChild(modeEntityBtn);
 
-        autoRotateBtn = modeButton("gui.auto_rotate", -1);
-        autoRotateBtn.textStyle(s -> s.fontSize(8));
-        autoRotateBtn.layout(l -> l.height(14));
+        autoRotateBtn = new Button();
+        autoRotateBtn.setText("gui.auto_rotate");
+        autoRotateBtn.textStyle(s -> s.fontSize(6));
+        autoRotateBtn.layout(l -> l.width(62).height(13));
         autoRotateBtn.setOnClick(e -> {
             autoRotate = !autoRotate;
             updateAutoRotateButton();
         });
-        col.addChild(autoRotateBtn);
+        vpHeader.addChild(autoRotateBtn);
         updateAutoRotateButton();
+
+        col.addChild(vpHeader);
 
         entityPickRow = new UIElement().layout(l -> l.widthPercent(100)
                 .flexDirection(FlexDirection.COLUMN).gapAll(1));
         fEntityPicker = new RegistryPicker(RegistryPicker.Kind.ENTITY);
-        fEntityPicker.layout(l -> l.widthPercent(100).height(16));
+        fEntityPicker.layout(l -> l.widthPercent(100).height(14));
         fEntityPicker.setOnValueChanged(v -> {
             previewEntityId = v == null || v.isEmpty() ? null : v;
             previewEntity = null;
@@ -385,6 +417,17 @@ public final class LooksScreen extends ModularUIScreen {
             e.stopPropagation();
         });
         col.addChild(viewport);
+
+        // Blender viewport status bar: live camera readout
+        var status = new UIElement().layout(l -> l.widthPercent(100).height(14)
+                .flexDirection(FlexDirection.ROW).gapAll(6).paddingAll(1)
+                .alignItems(AlignItems.CENTER));
+        status.style(s -> s.background(new ColorRectTexture(HEADER_BG)));
+        viewStatus = new Label();
+        viewStatus.textStyle(style -> style.fontSize(7).textColor(0xFF9A9AA0).adaptiveWidth(true));
+        status.addChild(viewStatus);
+        col.addChild(status);
+
         return col;
     }
 
@@ -554,10 +597,17 @@ public final class LooksScreen extends ModularUIScreen {
     private UIElement header() {
         var headerRow = new UIElement().layout(l ->
                 l.widthPercent(100).flexDirection(FlexDirection.ROW)
-                        .gapAll(6).alignItems(AlignItems.CENTER));
+                        .gapAll(6).paddingAll(2).alignItems(AlignItems.CENTER));
+        headerRow.style(s -> s.background(new ColorRectTexture(HEADER_BG)));
+
+        // Blender-style logo tile
+        UIElement logo = new UIElement().layout(l -> l.width(10).height(10));
+        logo.style(s -> s.background(new ColorRectTexture(ACCENT)));
+        headerRow.addChild(logo);
+
         Label title = new Label();
         title.setText(Component.translatable("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".title"));
-        title.textStyle(style -> style.fontSize(14).adaptiveWidth(true));
+        title.textStyle(style -> style.fontSize(13).adaptiveWidth(true));
         headerRow.addChild(title);
 
         raceLabel = new Label();
@@ -566,24 +616,22 @@ public final class LooksScreen extends ModularUIScreen {
         raceLabel.setText(LooksClient.raceName(raceId));
         headerRow.addChild(raceLabel);
 
-        countLabel = new Label();
-        countLabel.textStyle(style -> style.fontSize(9).textColor(0xFF9A9AA0));
-        countLabel.layout(l -> l.flex(1));
-        headerRow.addChild(countLabel);
+        var spacer = new UIElement().layout(l -> l.flex(1));
+        headerRow.addChild(spacer);
 
         Button closeBtn = smallButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".close",
                 this::closeWithoutSaving);
         closeBtn.layout(l -> l.width(52).height(15));
         headerRow.addChild(closeBtn);
-        updateCountLabel();
         return headerRow;
     }
 
-    private UIElement buildEditor() {
-        var panel = new UIElement().layout(l -> l.widthPercent(100)
+    private UIElement buildEditorPanel() {
+        var panel = new UIElement().layout(l -> l.width(340)
                 .flexDirection(FlexDirection.COLUMN).gapAll(3).paddingAll(4)
                 .alignItems(AlignItems.STRETCH));
         panel.style(s -> s.background(new ColorRectTexture(PANEL_BG)));
+        panel.addChild(blenderHeader("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".editor"));
 
         emptyDetailHint = adaptiveLabel(9);
         emptyDetailHint.setText(Component.translatable(
@@ -598,8 +646,8 @@ public final class LooksScreen extends ModularUIScreen {
         visRow.addChild(fieldLabelFixed("gui.visible_parts"));
         for (Cosmetics.Part part : Cosmetics.Part.values()) {
             Button toggle = new Button();
-            toggle.setText(part.jsonName).textStyle(s -> s.fontSize(7));
-            toggle.layout(l -> l.flex(1).height(14));
+            toggle.setText(part.translationKey()).textStyle(s -> s.fontSize(6));
+            toggle.layout(l -> l.flex(1).height(13));
             boolean visible = visibleParts.contains(part);
             toggle.style(s -> s.background(new ColorRectTexture(
                     visible ? ROW_SELECTED : ROW_BG)));
@@ -617,7 +665,8 @@ public final class LooksScreen extends ModularUIScreen {
         }
         detailGroup.addChild(visRow);
 
-        // item + body part
+        // ITEM section: picker + body part
+        detailGroup.addChild(blenderSection("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".section.item"));
         var r1 = row();
         var itemCol = new UIElement().layout(l -> l.flex(1)
                 .flexDirection(FlexDirection.COLUMN).gapAll(1)
@@ -658,7 +707,8 @@ public final class LooksScreen extends ModularUIScreen {
         r1.addChild(partCol);
         detailGroup.addChild(r1);
 
-        // position + rotation + scale
+        // TRANSFORM section: position + rotation + scale
+        detailGroup.addChild(blenderSection("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".section.transform"));
         fPx = numberField("pos.x", 0);
         fPy = numberField("pos.y", 0);
         fPz = numberField("pos.z", 0);
@@ -686,26 +736,6 @@ public final class LooksScreen extends ModularUIScreen {
         rScale.addChild(labeledFieldFlex(fScale));
         detailGroup.addChild(rScale);
 
-        var actions = row();
-        Button addBtn = smallButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".add",
-                this::addEntry);
-        addBtn.layout(l -> l.width(56).height(15));
-        actions.addChild(addBtn);
-        Button deleteBtn = smallButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".delete",
-                this::deleteSelected);
-        deleteBtn.layout(l -> l.width(56).height(15));
-        actions.addChild(deleteBtn);
-        Button copyBtn = smallButton("gui.copy", this::copySelected);
-        copyBtn.layout(l -> l.width(44).height(15));
-        actions.addChild(copyBtn);
-        Button pasteBtn = smallButton("gui.paste", this::pasteEntry);
-        pasteBtn.layout(l -> l.width(44).height(15));
-        actions.addChild(pasteBtn);
-        Button saveBtn = smallButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".save",
-                this::saveCosmetics);
-        saveBtn.layout(l -> l.width(62).height(15));
-        actions.addChild(saveBtn);
-
         Label hint = new Label();
         hint.setText(Component.translatable("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".edit_hint")
                 .withStyle(ChatFormatting.DARK_GRAY));
@@ -716,9 +746,55 @@ public final class LooksScreen extends ModularUIScreen {
         // selected, and an add button hidden behind "has selection" is a
         // deadlock — the row must stay visible at all times
         panel.addChild(detailGroup);
+        panel.addChild(blenderSection("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".section.actions"));
+        var actions = row();
+        Button addBtn = smallButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".add",
+                this::addEntry);
+        addBtn.layout(l -> l.flex(1).height(15));
+        actions.addChild(addBtn);
+        Button deleteBtn = smallButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".delete",
+                this::deleteSelected);
+        deleteBtn.layout(l -> l.flex(1).height(15));
+        actions.addChild(deleteBtn);
+        Button copyBtn = smallButton("gui.copy", this::copySelected);
+        copyBtn.layout(l -> l.flex(1).height(15));
+        actions.addChild(copyBtn);
+        Button pasteBtn = smallButton("gui.paste", this::pasteEntry);
+        pasteBtn.layout(l -> l.flex(1).height(15));
+        actions.addChild(pasteBtn);
+        Button saveBtn = smallButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".save",
+                this::saveCosmetics);
+        saveBtn.layout(l -> l.flex(1).height(15));
+        actions.addChild(saveBtn);
         panel.addChild(actions);
         panel.addChild(hint);
         return panel;
+    }
+
+    /** Blender panel-header strip (editor title). */
+    private static UIElement blenderHeader(String titleKey) {
+        var head = new UIElement().layout(l -> l.widthPercent(100).height(16)
+                .flexDirection(FlexDirection.ROW).gapAll(4).paddingAll(2)
+                .alignItems(AlignItems.CENTER));
+        head.style(s -> s.background(new ColorRectTexture(HEADER_BG)));
+        var title = new Label();
+        title.setText(Component.translatable(titleKey));
+        title.textStyle(style -> style.fontSize(8).textColor(0xFFDDDDDD).adaptiveWidth(true));
+        head.addChild(title);
+        return head;
+    }
+
+    /** Blender collapsible-panel section divider. */
+    private static UIElement blenderSection(String titleKey) {
+        var head = new UIElement().layout(l -> l.widthPercent(100).height(12)
+                .flexDirection(FlexDirection.ROW).gapAll(4).paddingAll(1)
+                .alignItems(AlignItems.CENTER));
+        head.style(s -> s.background(new ColorRectTexture(SECTION_BG)));
+        var title = new Label();
+        title.setText(Component.translatable(titleKey));
+        title.textStyle(style -> style.fontSize(7).textColor(0xFF9A9AA0).adaptiveWidth(true));
+        head.addChild(title);
+        return head;
     }
 
     private TextField numberField(String key, float initial) {
@@ -781,7 +857,14 @@ public final class LooksScreen extends ModularUIScreen {
                 .alignItems(AlignItems.STRETCH));
         var lb = new Label();
         lb.setText(Component.literal(axis));
-        lb.textStyle(s -> s.fontSize(7).textColor(0xFF9A9AA0));
+        // Blender axis colors: X red, Y green, Z blue
+        int axisColor = switch (axis) {
+            case "X" -> 0xFFFF6B6B;
+            case "Y" -> 0xFF8BD37A;
+            case "Z" -> 0xFF6FA8DC;
+            default -> 0xFF9A9AA0;
+        };
+        lb.textStyle(s -> s.fontSize(7).textColor(axisColor));
         col.addChild(lb);
         col.addChild(tf);
         return col;

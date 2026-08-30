@@ -42,5 +42,10 @@
   "gui.search": "Search...",
   "gui.copy": "Copy",
   "gui.paste": "Paste",
-  "gui.originsx_looks.part.cape": "Cape"
+  "gui.originsx_looks.part.cape": "Cape",
+  "gui.originsx_looks.list": "Cosmetics",
+  "gui.originsx_looks.editor": "Editor",
+  "gui.originsx_looks.section.item": "ITEM",
+  "gui.originsx_looks.section.transform": "TRANSFORM",
+  "gui.originsx_looks.section.actions": "ACTIONS"
 }

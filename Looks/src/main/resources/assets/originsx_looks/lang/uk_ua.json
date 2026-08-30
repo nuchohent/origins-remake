@@ -42,5 +42,10 @@
   "gui.search": "Пошук...",
   "gui.copy": "Копіювати",
   "gui.paste": "Вставити",
-  "gui.originsx_looks.part.cape": "Кам"
+  "gui.originsx_looks.part.cape": "Кам",
+  "gui.originsx_looks.list": "Косметика",
+  "gui.originsx_looks.editor": "Редактор",
+  "gui.originsx_looks.section.item": "ПРЕДМЕТ",
+  "gui.originsx_looks.section.transform": "ТРАНСФОРМАЦІЯ",
+  "gui.originsx_looks.section.actions": "ДІЇ"
 }
