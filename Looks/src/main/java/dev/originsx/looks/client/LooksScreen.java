@@ -751,17 +751,17 @@ public final class LooksScreen extends ModularUIScreen {
         var panelEl = new UIElement();
         panelEl.addChild(blenderSection("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".section.view"));
 
-        camYawS = (Slider.Horizontal) labeledSlider(
-                "gui." + dev.originsx.looks.LooksMod.MOD_ID + ".cam.yaw", camYawS());
-        panelEl.addChild(camYawS);
+        camYawS = camYawS();
+        panelEl.addChild(labeledSlider(
+                "gui." + dev.originsx.looks.LooksMod.MOD_ID + ".cam.yaw", camYawS));
 
-        camPitchS = (Slider.Horizontal) labeledSlider(
-                "gui." + dev.originsx.looks.LooksMod.MOD_ID + ".cam.pitch", camPitchS());
-        panelEl.addChild(camPitchS);
+        camPitchS = camPitchS();
+        panelEl.addChild(labeledSlider(
+                "gui." + dev.originsx.looks.LooksMod.MOD_ID + ".cam.pitch", camPitchS));
 
-        camZoomS = (Slider.Horizontal) labeledSlider(
-                "gui." + dev.originsx.looks.LooksMod.MOD_ID + ".cam.zoom", camZoomS());
-        panelEl.addChild(camZoomS);
+        camZoomS = camZoomS();
+        panelEl.addChild(labeledSlider(
+                "gui." + dev.originsx.looks.LooksMod.MOD_ID + ".cam.zoom", camZoomS));
 
         var rReset = row();
         Button resetView = smallButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".reset_view",
