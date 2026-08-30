@@ -254,14 +254,35 @@ public final class LayoutEditor {
         return false;
     }
 
-    /** Climb a hit leaf to the topmost selectable container so a drag moves the
-     *  whole block (a panel/vieweport/column), not a tiny inner slider or label
-     *  whose grip covers half its area and whose size collapses in flex flow. */
+    /** True when the element occupies (nearly) its whole parent — used to skip
+     *  full-screen layout wrappers that should never be dragged as a block. */
+    private static boolean fillsParent(UIElement el) {
+        UIElement parent = el.getParent();
+        if (parent == null) {
+            return false;
+        }
+        return el.getSizeWidth() >= parent.getSizeWidth() - 2
+                && el.getSizeHeight() >= parent.getSizeHeight() - 2
+                && Math.abs(el.getPositionX() - parent.getPositionX()) <= 1
+                && Math.abs(el.getPositionY() - parent.getPositionY()) <= 1;
+    }
+
+    /** Climb a hit leaf to the nearest block container (a root child like the
+     *  header, or a panel inside the working area). A full-screen wrapper that
+     *  fills its parent is never selected, so grabbing a slider moves the one
+     *  panel, not the whole screen. */
     private UIElement climbToTop(UIElement el) {
         UIElement best = el;
-        for (UIElement cur = el.getParent(); cur != null && cur != root;
-                cur = cur.getParent()) {
-            if (insideOverlay(cur)) {
+        for (UIElement cur = el.getParent(); cur != null; cur = cur.getParent()) {
+            if (cur == root || insideOverlay(cur)) {
+                break;
+            }
+            if (cur.getParent() == root) {
+                if (fillsParent(cur)) {
+                    // full-screen layout canvas — keep the child block
+                    break;
+                }
+                best = cur;
                 break;
             }
             best = cur;
