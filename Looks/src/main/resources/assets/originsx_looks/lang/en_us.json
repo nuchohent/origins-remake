@@ -40,5 +40,7 @@
   "gui.visible_parts": "Visible:",
   "gui.auto_rotate": "Auto-rotate",
   "gui.search": "Search...",
+  "gui.copy": "Copy",
+  "gui.paste": "Paste",
   "gui.originsx_looks.part.cape": "Cape"
 }

@@ -40,5 +40,7 @@
   "gui.visible_parts": "Видеть:",
   "gui.auto_rotate": "Автоповорот",
   "gui.search": "Поиск...",
+  "gui.copy": "Копировать",
+  "gui.paste": "Вставить",
   "gui.originsx_looks.part.cape": "Плащ"
 }

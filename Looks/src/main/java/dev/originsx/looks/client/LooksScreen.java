@@ -331,7 +331,7 @@ public final class LooksScreen extends ModularUIScreen {
 
         autoRotateBtn = modeButton("gui.auto_rotate", -1);
         autoRotateBtn.textStyle(s -> s.fontSize(8));
-        autoRotateBtn.layout(l -> l.flex(1).height(14));
+        autoRotateBtn.layout(l -> l.height(14));
         autoRotateBtn.setOnClick(e -> {
             autoRotate = !autoRotate;
             updateAutoRotateButton();
