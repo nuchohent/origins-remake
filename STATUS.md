@@ -1,38 +1,27 @@
 # STATUS — передача дел следующей сессии
 
-_Обновлено: 2026-08-29 (фичи LOOKS: анимации, cape, частицы, поиск, копирование, /looks). Читай вместе с PATCH_LOG.md (полная история) и README.md._
+_Обновлено: 2026-08-30 (SkillTree правки: canvas-слушатели, осколки в шапке, защита битых узлов, стабильные координаты). Читай вместе с PATCH_LOG.md (полная история) и README.md._
 
-## Текущий статус (2026-08-29)
+## Текущий статус (2026-08-30)
 
 ### ✅ Закрыто
-- **OriginsX сборка починена** — фикс `forwardImpulse`/`leftImpulse` → `hasForwardImpulse()` в `OriginsXClient.java` (API `ClientInput` изменился в NeoForge 26.2.0.67)
-- **Все 4 модуля собираются и билдятся**: Race API 1.0.0, OriginsX 1.11.2, Skill Tree 1.4.11, OriginsX Looks 1.0.0
-- **SkillTree зависимость синхронизирована** — `raceapi_version` обновлён с 0.5.0 → 1.0.0 в `gradle.properties`
-- **LOOKS аудит (LOOKS_AUDIT_2026-08-27.md) закрыт**:
-  - Критичные #1-3 уже были исправлены в коде
-  - Средние: unchecked cast в `registerCrownLayer()` → `instanceof RenderLayerParent` check + валидация scale
-  - Мелкие: удалён `loggedPIP`, cleanup `previewEntity`, проверка uuid, dead code frameCount, редундантный null-check
+- **Все 4 модуля собраны и задеплоены в PrismLauncher (инстанс 26.2(1))**: Race API 1.0.1, OriginsX 1.11.3, Skill Tree 1.5.0, OriginsX Looks 1.0.0-alpha (NeoForge 26.2.0.67)
+- **SkillTree 1.5.0** — правки 2026-08-30: дублирующиеся canvas-слушатели (перетаскивание узлов не ускоряется, одно меню «добавить узел»), баланс осколков в шапке экрана, отклонение разблокировки битых узлов (`NO_MATCHING_POWER` — осколки не жгутся впустую), legacy-сетка конвертируется в пиксели один раз при загрузке в редактор (координаты узлов не прыгают)
+- **OriginsX 1.11.3** — сборка на NeoForge 26.2.0.67: `forwardImpulse`/`leftImpulse` → `hasForwardImpulse()` в `OriginsXClient.java`
+- **Race API 1.0.1** — зависимость SkillTree синхронизирована (`raceapi_version` 0.5.0 → 1.0.0)
+- **LOOKS (отложен, локально)**: Blender-style редактор (3 колонки: список/вьюпорт/свойства, шапка-вьюпорт с режимами, auto-rotate), авто-поворот починен (`!vpDragging`), переводы `gui.copy`/`gui.paste`
 
-### 🆕 Новые фичи Looks 1.0.0
-- **Анимация косметики** (`AnimConfig`): `rotateSpeed`, `bobAmplitude`, `bobSpeed`, `pulseAmplitude` — предметы крутятся, прыгают, пульсируют в реальном времени
-- **Part `CAPE`** — плащ рендерится на спине (отдельный слой, без кости)
-- **`zIndex`** — управление порядком слоёв косметики
-- **Частицы при морфе** — splash-эффект при создании/удалении призрака
-- **Звук при морфе** — `PLAYER_BURP` при трансформации
-- **Поиск/фильтр** в списке косметики
-- **Toggle видимости** по частям тела
-- **Auto-rotate** вьюпорта
-- **Copy/Paste** между расами (общий clipboard)
-- **Команда `/looks`**: `reload` (очистить превью), `debug` (показать активные косметики)
+### 📦 JARы (собрано 2026-08-30)
+- `RaceAPI/build/libs/Race API-26.2-1.0.1.jar`
+- `OriginsX/build/libs/OriginsX-26.2-1.11.3.jar`
+- `SkillTree/build/libs/OriginsX - Skill Tree-26.2-1.5.0.jar` (свежий, с правками 30.08 — задеплоен)
+- `Looks/build/libs/OriginsX Looks-26.2-1.0.0-alpha.jar`
 
-### 📦 JARы (собрано 2026-08-29)
-- `RaceAPI/build/libs/Race API-26.2-1.0.0.jar`
-- `OriginsX/build/libs/OriginsX-26.2-1.11.2.jar`
-- `SkillTree/build/libs/OriginsX - Skill Tree-26.2-1.4.11.jar`
-- `Looks/build/libs/OriginsX Looks-26.2-1.0.0.jar`
+Все 4 jar лежат в `.../instances/26.2(1)/minecraft/mods/` (старых версий нет).
 
-### План после фикса вьюпорта
-Бамп версий (SkillTree→1.5.0, RaceAPI→1.0.1, OriginsX→1.11.3, Looks→1.0.0 alpha), запись в PATCH_LOG, выгрузка на CurseForge.
+### Осталось
+- **Выгрузка на CurseForge**: Race API 1.0.1 (release), OriginsX 1.11.3 (release), Skill Tree 1.5.0 (alpha). Looks не публикуется (отложен, локально).
+- Перенести таблицу «Версия на CF / Локально» ниже.
 
 ---
 _Старый вводный блок ниже (история до этой сессии) — сохранён целиком._
@@ -48,14 +37,14 @@ _Старый вводный блок ниже (история до этой с�
 - **Роадмап v2**: drag прямо во 3D-вьюпорте (LDLib2 Scene); **идея автора**: выбор модели СУЩНОСТИ вместо модели игрока (полное превращение — рендер чужой модели на игроке)
 - Иконка: branding/originsx_looks.png (breda.jpg от автора)
 
-## Текущее состояние: РЕЛИЗ 1.0.0 на CurseForge + локальные наработки следующей волны
+## Текущее состояние: РЕЛИЗ бампнут локально, выгрузка на CurseForge следующая
 
 | Мод | Версия на CF | Локально | Что локально сверх релиза |
 |---|---|---|---|
-| Race API | **1.0.0** (release) | 1.0.0+ | `getSourceJson()` для аддонов |
-| OriginsX | **1.11.2** (release) | 1.11.2+ | кнопка «Внешность» |
-| Skill Tree | **1.4.11** (alpha) | 1.4.11+ | материализация сил в узлах, тост сохранения, пикер иконок узла, **загрузка существующего дерева в редактор** |
-| Looks | — (не опубликован) | 1.0.0 | новый мод, v1 |
+| Race API | **1.0.0** (release) | **1.0.1** (готов к выгрузке) | зависимость SkillTree синхронизирована (raceapi 1.0.0) |
+| OriginsX | **1.11.2** (release) | **1.11.3** (готов к выгрузке) | фикс сборки на NeoForge 26.2.0.67 (`hasForwardImpulse()`) |
+| Skill Tree | **1.4.11** (alpha) | **1.5.0** (готов к выгрузке) | правки 2026-08-30: canvas-слушатели, осколки в шапке, `NO_MATCHING_POWER`, конвертация legacy-координат |
+| Looks | — (не опубликован) | **1.0.0-alpha** (отложен) | Blender-style редактор, новый мод, v1 |
 
 ## Незакрытые хвосты (не баги — осознанные решения и отложенное)
 

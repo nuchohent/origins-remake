@@ -63,6 +63,8 @@ public final class SkillGate {
         SUCCESS,
         NO_TREE,
         UNKNOWN_NODE,
+        /** Node's power index does not point at any power of the race. */
+        NO_MATCHING_POWER,
         MAX_TIER,
         REQUIREMENTS_NOT_MET,
         NOT_ENOUGH_SHARDS
@@ -82,6 +84,10 @@ public final class SkillGate {
         TreeNode node = tree.node(nodeId);
         if (node == null) {
             return UnlockResult.UNKNOWN_NODE;
+        }
+        if (node.index() < 0 || node.index() >= race.getPowers().size()) {
+            // the node does not gate any real power: refuse to burn shards on it
+            return UnlockResult.NO_MATCHING_POWER;
         }
         ProgressData progress = ProgressData.get(player.level());
         UUID uuid = player.getUUID();

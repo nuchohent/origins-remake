@@ -102,6 +102,9 @@ public final class SkillTreeScreen extends ModularUIScreen {
 
     // context menu ("toolkit") opened by right click
     private UIElement contextMenu;
+    /** True once the edit-mode canvas listeners have been attached (they are
+     *  registered from every rebuildCanvas() call unless guarded). */
+    private boolean canvasListenersInstalled;
     /** Screen-space mouse position of the latest mouse event (for menu placement). */
     private float lastMouseX;
     private float lastMouseY;
@@ -114,6 +117,7 @@ public final class SkillTreeScreen extends ModularUIScreen {
     private Label infoCost;
     private Button unlockButton;
     private Label unlockCost;
+    private Label shardsLabel;
     private UIElement viewGroup;
     private UIElement editGroup;
     private TextField fId;
@@ -230,6 +234,7 @@ public final class SkillTreeScreen extends ModularUIScreen {
                 editJson.addProperty("title", "");
                 editJson.add("nodes", new JsonArray());
             }
+            convertLegacyCoords(editJson);
             reparseEditNodes();
             viewGroup.setDisplay(false);
             editGroup.setDisplay(true);
@@ -265,6 +270,9 @@ public final class SkillTreeScreen extends ModularUIScreen {
         if (toastVisible && System.currentTimeMillis() > toastHideAtMs) {
             toastVisible = false;
             toastHost.setDisplay(false);
+        }
+        if (shardsLabel != null) {
+            shardsLabel.setText(SkillTreeClient.shardsComponent());
         }
     }
 
@@ -358,6 +366,9 @@ public final class SkillTreeScreen extends ModularUIScreen {
         title.textStyle(style -> style.fontSize(14));
         title.layout(l -> l.flex(1));
         headerRow.addChild(title);
+        shardsLabel = new Label();
+        shardsLabel.textStyle(style -> style.fontSize(11).textColor(0xFFd09020));
+        headerRow.addChild(shardsLabel);
         root.addChild(headerRow);
 
         root.addChild(separator());
@@ -646,8 +657,11 @@ public final class SkillTreeScreen extends ModularUIScreen {
             world.addChild(empty);
         }
 
-        // old grid trees stored small cell indices; new trees use raw pixels
-        boolean legacyGrid = true;
+        // old grid trees stored small cell indices; new trees use raw pixels.
+        // Only server-synced view data is ever grid-based: the editor already
+        // normalized legacy coordinates to pixels on load, and must never
+        // re-derive the mode while the author is placing nodes.
+        boolean legacyGrid = !editMode;
         for (var node : nodes) {
             if (node.x() > 30 || node.y() > 30) {
                 legacyGrid = false;
@@ -666,7 +680,8 @@ public final class SkillTreeScreen extends ModularUIScreen {
         ScrollerView scroller = new ScrollerView();
         scroller.layout(l -> l.flex(1).widthPercent(100));
         scroller.viewContainer(view -> view.addChild(world));
-        if (editMode) {
+        if (editMode && !canvasListenersInstalled) {
+            canvasListenersInstalled = true;
             // capture phase: fires even when the click lands on scroller internals;
             // right click on empty space -> "add node" toolkit; drag moves nodes
             canvasHost.addEventListener(UIEvents.MOUSE_DOWN, e -> {
@@ -1246,6 +1261,42 @@ public final class SkillTreeScreen extends ModularUIScreen {
         SkillTreeClientState.ParsedTree parsed =
                 SkillTreeClientState.parseTree(editJson.toString());
         editNodes = parsed.nodes();
+    }
+
+    /**
+     * Older stored trees used small grid-cell coordinates; new ones use raw
+     * pixels. The canvas resolution must stay fixed for the whole editing
+     * session, so convert a legacy tree to pixels once at load time instead
+     * of re-deriving the mode on every repaint (which made a single new
+     * pixel-placed node rescale the entire rest of the tree).
+     */
+    private static void convertLegacyCoords(JsonObject tree) {
+        if (tree == null || !tree.has("nodes") || !tree.get("nodes").isJsonArray()) {
+            return;
+        }
+        boolean legacy = true;
+        for (var element : tree.getAsJsonArray("nodes")) {
+            if (element.isJsonObject()) {
+                var node = element.getAsJsonObject();
+                int x = node.has("x") ? node.get("x").getAsInt() : 0;
+                int y = node.has("y") ? node.get("y").getAsInt() : 0;
+                if (x > 30 || y > 30) {
+                    legacy = false;
+                    break;
+                }
+            }
+        }
+        if (!legacy) {
+            return;
+        }
+        for (var element : tree.getAsJsonArray("nodes")) {
+            if (!element.isJsonObject()) {
+                continue;
+            }
+            var node = element.getAsJsonObject();
+            node.addProperty("x", (node.has("x") ? node.get("x").getAsInt() : 0) * CELL);
+            node.addProperty("y", (node.has("y") ? node.get("y").getAsInt() : 0) * CELL);
+        }
     }
 
     private void addNodeAtPixel(float px, float py) {
