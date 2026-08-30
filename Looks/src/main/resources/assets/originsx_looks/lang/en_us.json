@@ -1,6 +1,7 @@
 {
   "gui.originsx_looks.add": "Add",
   "gui.originsx_looks.close": "Close",
+  "gui.originsx_looks.clear": "Clear selection",
   "gui.originsx_looks.count": "%s items",
   "gui.originsx_looks.delete": "Delete",
   "gui.originsx_looks.edit_hint": "Changes preview live on your character in the world (F5). Save writes them into the race file.",

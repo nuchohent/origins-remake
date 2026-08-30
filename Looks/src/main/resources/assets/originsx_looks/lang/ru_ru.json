@@ -1,6 +1,7 @@
 {
   "gui.originsx_looks.add": "Добавить",
   "gui.originsx_looks.close": "Закрыть",
+  "gui.originsx_looks.clear": "Сбросить выделение",
   "gui.originsx_looks.count": "Элементов: %s",
   "gui.originsx_looks.delete": "Удалить",
   "gui.originsx_looks.edit_hint": "Изменения сразу видны на твоём персонаже в мире (F5). «Сохранить» записывает их в файл расы.",

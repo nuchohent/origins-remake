@@ -758,15 +758,25 @@ public final class LooksScreen extends ModularUIScreen {
         Button pasteBtn = smallButton("gui.paste", this::pasteEntry);
         pasteBtn.layout(l -> l.flex(1).height(15));
         actions.addChild(pasteBtn);
-        Button saveBtn = smallButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".save",
-                this::saveCosmetics);
-        saveBtn.layout(l -> l.flex(1).height(15));
-        actions.addChild(saveBtn);
         body.addChild(actions);
         body.addChild(buildCameraPanel());
         body.addChild(buildQuickPanel());
         body.addChild(buildPresetsPanel());
         body.addChild(hint);
+
+        // Pinned bottom bar, always on screen (the sections above live in a
+        // scroller and are taller than any window): Save + Clear selection,
+        // the Blender-style "get rid of the item's parameters" escape hatch.
+        var footer = row();
+        Button saveBtn = smallButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".save",
+                this::saveCosmetics);
+        saveBtn.layout(l -> l.flex(1).height(15));
+        footer.addChild(saveBtn);
+        Button clearBtn = smallButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".clear",
+                this::deselect);
+        clearBtn.layout(l -> l.flex(1).height(15));
+        footer.addChild(clearBtn);
+        panel.addChild(footer);
         return panel;
     }
 
@@ -1123,6 +1133,14 @@ public final class LooksScreen extends ModularUIScreen {
         entries.remove((int) selected);
         selected = entries.isEmpty() ? null
                 : Math.min(selected, entries.size() - 1);
+        publishPreview();
+        rebuildList();
+        fillFields();
+    }
+
+    /** Clears the current selection so no item parameters are shown at all. */
+    private void deselect() {
+        selected = null;
         publishPreview();
         rebuildList();
         fillFields();
