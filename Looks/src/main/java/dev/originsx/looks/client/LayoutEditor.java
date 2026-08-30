@@ -254,6 +254,21 @@ public final class LayoutEditor {
         return false;
     }
 
+    /** Climb a hit leaf to the topmost selectable container so a drag moves the
+     *  whole block (a panel/vieweport/column), not a tiny inner slider or label
+     *  whose grip covers half its area and whose size collapses in flex flow. */
+    private UIElement climbToTop(UIElement el) {
+        UIElement best = el;
+        for (UIElement cur = el.getParent(); cur != null && cur != root;
+                cur = cur.getParent()) {
+            if (insideOverlay(cur)) {
+                break;
+            }
+            best = cur;
+        }
+        return best;
+    }
+
     @Nullable
     private UIElement hitTestRec(UIElement el, float px, float py) {
         if (el == overlay || insideOverlay(el)) {
@@ -312,6 +327,7 @@ public final class LayoutEditor {
         while (target instanceof Label label && target.getParent() instanceof Button) {
             target = label.getParent();
         }
+        target = climbToTop(target);
         select(target);
         if (selected == null) {
             return;
@@ -352,6 +368,12 @@ public final class LayoutEditor {
             }
             if (pinnedSet.add(selected)) {
                 pinned.add(selected);
+                if (!resizing) {
+                    // Freeze the on-screen box when a widget first leaves its flex
+                    // flow: an absolutely-positioned child that only pins left/top
+                    // gets sized by content again and can collapse to a sliver.
+                    setPinnedSize(selected, selected.getSizeWidth(), selected.getSizeHeight());
+                }
             }
             if (resizing) {
                 float w = Math.max(MIN_SIZE, startW + dx);
