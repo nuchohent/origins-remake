@@ -41,6 +41,16 @@ public final class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerM
     /** Full block+sky light (0xF000F0) used for glowing cosmetics. */
     private static final int FULL_BRIGHT_LIGHT = 0xF000F0;
 
+    /**
+     * Preview-only "indoor" light: the editor viewport renders inventory-style
+     * (everything FULL_BRIGHT), so glow made no sense visually there — every
+     * item looked equally lit. While the LooksScreen is open we light the
+     * non-glowing cosmetics dim instead, so the glow actually pops in the
+     * viewport. Screens replace world rendering entirely, so this never shows
+     * in-game.
+     */
+    private static final int PREVIEW_LIGHT = 0x007070;
+
     /** Model units the head bone pivot is below the crown (skull is ~8 px tall). */
     private static final float HEAD_BASE_LIFT = 6f;
 
@@ -79,11 +89,13 @@ public final class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerM
         List<CosmeticsStateModifier.Extracted> sorted = extracted.stream()
                 .sorted(Comparator.comparingInt(e -> e.entry().zIndex()))
                 .toList();
+        boolean preview = LooksClient.looksEditorOpen;
         for (CosmeticsStateModifier.Extracted data : sorted) {
-            int entryLight = data.entry().glow() ? FULL_BRIGHT_LIGHT : light;
+            int entryLight = data.entry().glow() ? FULL_BRIGHT_LIGHT
+                    : (preview ? PREVIEW_LIGHT : light);
             int tint = state.outlineColor != 0 ? state.outlineColor : data.entry().tint();
             if (data.entry().part() == Cosmetics.Part.CAPE) {
-                renderCape(poseStack, collector, light, tint, data, state);
+                renderCape(poseStack, collector, entryLight, tint, data, state);
                 continue;
             }
             ModelPart bone = bone(model, data.entry().part());
@@ -93,7 +105,7 @@ public final class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerM
             poseStack.pushPose();
             bone.translateAndRotate(poseStack);
             applyTransform(poseStack, data.entry());
-            data.itemState().submit(poseStack, collector, light,
+            data.itemState().submit(poseStack, collector, entryLight,
                     OverlayTexture.NO_OVERLAY, tint);
             poseStack.popPose();
         }

@@ -155,6 +155,7 @@ public final class LooksScreen extends ModularUIScreen {
                         .getStylesheetSafe(com.lowdragmc.lowdraglib2.gui.ui.style.StylesheetManager.GDP))),
                 Component.translatable("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".title"));
         this.raceId = raceId == null ? "" : raceId;
+        LooksClient.looksEditorOpen = true;
         loadExisting();
         UIElement root = ROOT_HOLDER.get();
         ROOT_HOLDER.remove();
@@ -174,6 +175,18 @@ public final class LooksScreen extends ModularUIScreen {
                 .gapAll(4).paddingAll(6).alignItems(AlignItems.STRETCH));
         ROOT_HOLDER.set(root);
         return root;
+    }
+
+    @Override
+    public void onClose() {
+        LooksClient.looksEditorOpen = false;
+        super.onClose();
+    }
+
+    @Override
+    public void removed() {
+        LooksClient.looksEditorOpen = false;
+        super.removed();
     }
 
     @Override
@@ -562,10 +575,20 @@ public final class LooksScreen extends ModularUIScreen {
         panel.style(s -> s.background(new ColorRectTexture(PANEL_BG)));
         panel.addChild(blenderHeader("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".editor"));
 
+        // The right column is taller than any reasonable window, so every
+        // section lives inside a scroller (previously the presets/quick/camera
+        // panels were simply cut off below the window edge).
+        var scroller = new ScrollerView();
+        scroller.layout(l -> l.flex(1).widthPercent(100));
+        var body = new UIElement().layout(l -> l.widthPercent(100)
+                .flexDirection(FlexDirection.COLUMN).gapAll(3));
+        scroller.addScrollViewChild(body);
+        panel.addChild(scroller);
+
         emptyDetailHint = adaptiveLabel(9);
         emptyDetailHint.setText(Component.translatable(
                 "gui." + dev.originsx.looks.LooksMod.MOD_ID + ".pick_hint"));
-        panel.addChild(emptyDetailHint);
+        body.addChild(emptyDetailHint);
 
         detailGroup = new UIElement().layout(l ->
                 l.widthPercent(100).flexDirection(FlexDirection.COLUMN).gapAll(3));
@@ -677,7 +700,10 @@ public final class LooksScreen extends ModularUIScreen {
         var rColor = row();
         rColor.addChild(fieldLabelFixed("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".field.color"));
         colorBtn = new Button();
-        colorBtn.layout(l -> l.width(56).height(14));
+        colorBtn.layout(l -> l.width(70).height(14));
+        colorBtn.textStyle(s -> s.fontSize(6));
+        // replace the default "Button" caption with the live hex value
+        colorBtn.setText(String.format("#%08X", Cosmetics.Entry.DEFAULT_TINT), false);
         colorBtn.setOnClick(e -> {
             if (colorPickerHost != null) {
                 colorPickerHost.setDisplay(!colorPickerHost.isDisplayed());
@@ -691,8 +717,9 @@ public final class LooksScreen extends ModularUIScreen {
         fColor = new ColorSelector();
         fColor.layout(l -> l.width(150));
         fColor.setOnColorChangeListener(v -> {
+            // apply live while the user drags the picker instead of closing it
+            // on the first click, so the preview can be aimed before releasing
             setSelectedTint(v);
-            colorPickerHost.setDisplay(false);
         });
         colorPickerHost.addChild(fColor);
         detailGroup.addChild(colorPickerHost);
@@ -714,8 +741,8 @@ public final class LooksScreen extends ModularUIScreen {
         // actions live OUTSIDE detailGroup: with an empty list nothing is
         // selected, and an add button hidden behind "has selection" is a
         // deadlock — the row must stay visible at all times
-        panel.addChild(detailGroup);
-        panel.addChild(blenderSection("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".section.actions"));
+        body.addChild(detailGroup);
+        body.addChild(blenderSection("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".section.actions"));
         var actions = row();
         Button addBtn = smallButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".add",
                 this::addEntry);
@@ -735,11 +762,11 @@ public final class LooksScreen extends ModularUIScreen {
                 this::saveCosmetics);
         saveBtn.layout(l -> l.flex(1).height(15));
         actions.addChild(saveBtn);
-        panel.addChild(actions);
-        panel.addChild(buildCameraPanel());
-        panel.addChild(buildQuickPanel());
-        panel.addChild(buildPresetsPanel());
-        panel.addChild(hint);
+        body.addChild(actions);
+        body.addChild(buildCameraPanel());
+        body.addChild(buildQuickPanel());
+        body.addChild(buildPresetsPanel());
+        body.addChild(hint);
         return panel;
     }
 
@@ -1349,6 +1376,7 @@ public final class LooksScreen extends ModularUIScreen {
             fLayer.setText(fmt(entry.zIndex()));
             if (fColor != null) fColor.setColor(entry.tint(), false);
             if (colorBtn != null) {
+                colorBtn.setText(String.format("#%08X", entry.tint()), false);
                 colorBtn.style(s -> s.background(new ColorRectTexture(entry.tint())));
             }
             if (fGlow != null) fGlow.setOn(entry.glow(), false);

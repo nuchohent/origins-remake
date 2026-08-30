@@ -46,6 +46,15 @@ public final class LooksClient {
     /** Parse cache for race JSON; keys die with their Race instance on /reload. */
     private static final WeakHashMap<Race, List<Cosmetics.Entry>> PARSED = new WeakHashMap<>();
 
+    /**
+     * True while the appearance editor screen is on screen. The renderer uses
+     * it to light non-glowing cosmetics dim in the preview viewport (the
+     * viewport draws inventory-style, everything FULL_BRIGHT, so glow would be
+     * invisible otherwise). Screens replace the whole world render, so this
+     * never leaks into regular gameplay.
+     */
+    public static boolean looksEditorOpen = false;
+
     private LooksClient() {
     }
 

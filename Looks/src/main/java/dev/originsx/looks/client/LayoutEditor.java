@@ -245,8 +245,19 @@ public final class LayoutEditor {
 
     @Nullable
     private UIElement hitTestRec(UIElement el, float px, float py) {
-        if (el == overlay || el == root) {
+        if (el == overlay) {
             return null;
+        }
+        if (el == root) {
+            // never select the root itself, but DO walk its children
+            UIElement best = null;
+            for (UIElement child : el.getChildren()) {
+                UIElement hit = hitTestRec(child, px, py);
+                if (hit != null) {
+                    best = hit;
+                }
+            }
+            return best;
         }
         if (!el.isDisplayed()) {
             return null;
@@ -584,14 +595,37 @@ if (selected == null) {
         }
         final float fx = tx;
         final float fy = ty;
-        nameTag.getStyleBag().replaceOrPutCandidate(LayoutProperties.LEFT,
-                StyleSlot.of(LayoutProperties.LEFT, StyleOrigin.IMPORTANT, 999, 0, LengthPercentageAuto.length(fx)));
-        nameTag.getStyleBag().replaceOrPutCandidate(LayoutProperties.TOP,
-                StyleSlot.of(LayoutProperties.TOP, StyleOrigin.IMPORTANT, 999, 0, LengthPercentageAuto.length(fy)));
-        nameTag.markTaffyStyleDirty();
-        nameTag.setText(selectedId == null ? "" : selectedId);
+        String text = selectedId == null ? "" : selectedId;
+        Component shown = nameTag.getValue();
+        String cur = shown == null ? null : shown.getString();
+        boolean textChanged = cur == null || !cur.equals(text);
+        boolean moved = nameLayoutDirty(fx, fy);
+        if (textChanged || moved) {
+            if (textChanged) {
+                nameTag.setText(text);
+            }
+            if (moved) {
+                nameTag.getStyleBag().replaceOrPutCandidate(LayoutProperties.LEFT,
+                        StyleSlot.of(LayoutProperties.LEFT, StyleOrigin.IMPORTANT, 999, 0,
+                                LengthPercentageAuto.length(fx)));
+                nameTag.getStyleBag().replaceOrPutCandidate(LayoutProperties.TOP,
+                        StyleSlot.of(LayoutProperties.TOP, StyleOrigin.IMPORTANT, 999, 0,
+                                LengthPercentageAuto.length(fy)));
+                nameTag.markTaffyStyleDirty();
+            }
+        }
         nameTag.setDisplay(true);
         updateSelectedRow();
+    }
+
+    private float nameTagLeft = Float.NaN;
+    private float nameTagTop = Float.NaN;
+
+    private boolean nameLayoutDirty(float fx, float fy) {
+        boolean dirty = nameTagLeft != fx || nameTagTop != fy;
+        nameTagLeft = fx;
+        nameTagTop = fy;
+        return dirty;
     }
 
     // ------------------------------------------------------------------
