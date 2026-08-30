@@ -13,9 +13,12 @@ import com.lowdragmc.lowdraglib2.gui.ui.UI;
 import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
 import com.lowdragmc.lowdraglib2.gui.ui.data.TextWrap;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.Button;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.ColorSelector;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.Label;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.ScrollerView;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.Selector;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.Slider;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.Switch;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.TextField;
 import com.lowdragmc.lowdraglib2.gui.ui.event.UIEvents;
 import com.lowdragmc.lowdraglib2.gui.ui.rendering.GUIContext;
@@ -33,10 +36,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.EntitySpawnRequest;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.PlayerModelType;
@@ -47,7 +46,6 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
-import org.jetbrains.annotations.Nullable;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -82,7 +80,6 @@ public final class LooksScreen extends ModularUIScreen {
     /** Viewport modes: whose model the 3D preview shows. */
     private static final int MODE_PLAYER = 0;
     private static final int MODE_SLIM = 1;
-    private static final int MODE_ENTITY = 2;
     private static final int VIEWPORT_BG = 0xFF14141B;
     private static final float VP_YAW_MIN = -180f;
     private static final float VP_YAW_MAX = 180f;
@@ -95,18 +92,12 @@ public final class LooksScreen extends ModularUIScreen {
     private final List<Cosmetics.Entry> entries = new ArrayList<>();
     private Integer selected;
 
-    /** Race's bound entity model (full-transformation form), or null. */
-    @Nullable
-    private String modelEntityId;
-
     private Label raceLabel;
     private Label countLabel;
     private ScrollerView listScroller;
     private UIElement detailGroup;
     private Label emptyDetailHint;
     private RegistryPicker fItem;
-    @Nullable
-    private RegistryPicker fEntityPicker;
     private Selector<String> fPart;
     private TextField fPx;
     private TextField fPy;
@@ -115,7 +106,17 @@ public final class LooksScreen extends ModularUIScreen {
     private TextField fRy;
     private TextField fRz;
     private TextField fScale;
+    private TextField fLayer;
+    private ColorSelector fColor;
+    private UIElement colorPickerHost;
+    private Button colorBtn;
+    private Switch fGlow;
     private boolean loadingFields;
+
+    // viewport camera controls (right panel, always visible)
+    private Slider.Horizontal camYawS;
+    private Slider.Horizontal camPitchS;
+    private Slider.Horizontal camZoomS;
 
     // 3D viewport state (left panel)
     private int viewMode = MODE_PLAYER;
@@ -125,17 +126,12 @@ public final class LooksScreen extends ModularUIScreen {
     private boolean vpDragging;
     private float vpLastX;
     private float vpLastY;
-    @Nullable
-    private String previewEntityId;
-    @Nullable
-    private LivingEntity previewEntity;
     private Button modePlayerBtn;
     private Button modeSlimBtn;
-    private Button modeEntityBtn;
-    private UIElement entityPickRow;
     private Button autoRotateBtn;
     private boolean autoRotate = false;
     private Label viewStatus;
+    private LayoutEditor layoutEditor;
 
     // Search & filter
     private TextField fSearch;
@@ -163,10 +159,7 @@ public final class LooksScreen extends ModularUIScreen {
         UIElement root = ROOT_HOLDER.get();
         ROOT_HOLDER.remove();
         populateRoot(root);
-        if (fEntityPicker != null && previewEntityId != null) {
-            // seed the entity picker with the race's bound form (set in loadExisting)
-            fEntityPicker.setValue(previewEntityId, false);
-        }
+        layoutEditor = LayoutEditor.attach(root);
         rebuildList();
         fillFields();
         // publish BEFORE the first edit: without this the preview override is
@@ -198,6 +191,21 @@ public final class LooksScreen extends ModularUIScreen {
             viewStatus.setText(Component.literal(String.format("Yaw %.0f  Pitch %.0f  Zoom %.0f",
                     vpYaw, vpPitch, vpZoom)));
         }
+        if (layoutEditor != null) {
+            layoutEditor.tick();
+        }
+    }
+
+    @Override
+    public boolean keyPressed(net.minecraft.client.input.KeyEvent keyEvent) {
+        if (keyEvent.input() == org.lwjgl.glfw.GLFW.GLFW_KEY_L
+                && (keyEvent.modifiers() & org.lwjgl.glfw.GLFW.GLFW_MOD_CONTROL) != 0) {
+            if (layoutEditor != null) {
+                layoutEditor.toggle();
+                return true;
+            }
+        }
+        return super.keyPressed(keyEvent);
     }
 
     private void updateAutoRotateButton() {
@@ -226,13 +234,6 @@ public final class LooksScreen extends ModularUIScreen {
         var race = id == null ? null : dev.raceapi.race.RaceRegistry.getOrNull(id);
         if (race != null) {
             entries.addAll(LooksClient.ofRace(race));
-            Identifier model = LooksClient.modelEntityFor(race);
-            modelEntityId = model == null ? null : model.toString();
-            if (modelEntityId != null && BuiltInRegistries.ENTITY_TYPE.get(model) != null) {
-                // race is bound to an entity form: show it in the viewport by default
-                viewMode = MODE_ENTITY;
-                previewEntityId = modelEntityId;
-            }
         }
     }
 
@@ -352,11 +353,9 @@ public final class LooksScreen extends ModularUIScreen {
 
         modePlayerBtn = modeButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".viewport.player", MODE_PLAYER);
         modeSlimBtn = modeButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".viewport.slim", MODE_SLIM);
-        modeEntityBtn = modeButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".viewport.entity", MODE_ENTITY);
         updateModeButtons();
         vpHeader.addChild(modePlayerBtn);
         vpHeader.addChild(modeSlimBtn);
-        vpHeader.addChild(modeEntityBtn);
 
         autoRotateBtn = new Button();
         autoRotateBtn.setText("gui.auto_rotate");
@@ -370,21 +369,6 @@ public final class LooksScreen extends ModularUIScreen {
         updateAutoRotateButton();
 
         col.addChild(vpHeader);
-
-        entityPickRow = new UIElement().layout(l -> l.widthPercent(100)
-                .flexDirection(FlexDirection.COLUMN).gapAll(1));
-        fEntityPicker = new RegistryPicker(RegistryPicker.Kind.ENTITY);
-        fEntityPicker.layout(l -> l.widthPercent(100).height(14));
-        fEntityPicker.setOnValueChanged(v -> {
-            previewEntityId = v == null || v.isEmpty() ? null : v;
-            previewEntity = null;
-        });
-        entityPickRow.addChild(fEntityPicker);
-        Label hint = fieldLabel("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".viewport.model_hint");
-        hint.textStyle(s -> s.adaptiveWidth(true));
-        entityPickRow.addChild(hint);
-        entityPickRow.setDisplay(viewMode == MODE_ENTITY);
-        col.addChild(entityPickRow);
 
         var viewport = new UIElement().layout(l -> l.flex(1).widthPercent(100));
         viewport.style(s -> s.background(new ViewportTexture()));
@@ -442,9 +426,6 @@ public final class LooksScreen extends ModularUIScreen {
 
     private void setViewMode(int mode) {
         viewMode = mode;
-        if (entityPickRow != null) {
-            entityPickRow.setDisplay(mode == MODE_ENTITY);
-        }
         updateModeButtons();
     }
 
@@ -453,8 +434,6 @@ public final class LooksScreen extends ModularUIScreen {
                 viewMode == MODE_PLAYER ? ROW_SELECTED : ROW_BG)));
         modeSlimBtn.style(s -> s.background(new ColorRectTexture(
                 viewMode == MODE_SLIM ? ROW_SELECTED : ROW_BG)));
-        modeEntityBtn.style(s -> s.background(new ColorRectTexture(
-                viewMode == MODE_ENTITY ? ROW_SELECTED : ROW_BG)));
     }
 
     private static float wrapYaw(float yaw) {
@@ -467,55 +446,9 @@ public final class LooksScreen extends ModularUIScreen {
         return wrapped;
     }
 
-    /** Who the viewport renders right now: player or the picked entity. */
-    @Nullable
+    /** Who the viewport renders right now: the local player. */
     private LivingEntity viewportTarget() {
-        Minecraft mc = Minecraft.getInstance();
-        if (viewMode == MODE_ENTITY && previewEntityId != null && mc.level != null) {
-            if (previewEntity == null || !previewEntityId.equals(entityIdOf(previewEntity))) {
-                recreatePreviewEntity(mc);
-            }
-            return previewEntity;
-        }
-        return mc.player;
-    }
-
-    private static String entityIdOf(LivingEntity entity) {
-        Identifier key = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
-        return key == null ? "" : key.toString();
-    }
-
-    /**
-     * Creates a detached (never added to the world) living entity of the
-     * picked type purely for rendering; ignoreChecks bypasses the peaceful-
-     * difficulty spawn gate so monsters can be previewed too.
-     */
-    private static final java.util.concurrent.atomic.AtomicInteger ENTITY_ID_COUNTER =
-            new java.util.concurrent.atomic.AtomicInteger(2_000_000);
-
-    private void recreatePreviewEntity(Minecraft mc) {
-        LivingEntity created = null;
-        try {
-            Identifier id = Identifier.tryParse(previewEntityId);
-            var holder = id == null ? null : BuiltInRegistries.ENTITY_TYPE.get(id);
-            EntityType<?> type = holder != null && holder.isPresent()
-                    ? holder.get().value() : null;
-            if (type != null && mc.level != null) {
-                Entity spawned = type.create(mc.level,
-                        new EntitySpawnRequest(EntitySpawnReason.COMMAND, true));
-                if (spawned != null) {
-                    spawned.setId(ENTITY_ID_COUNTER.getAndIncrement());
-                }
-                if (spawned instanceof LivingEntity living) {
-                    EntityForm.registerCrownLayer(living);
-                    created = living;
-                }
-            }
-        } catch (Exception e) {
-            dev.originsx.looks.LooksMod.LOGGER.warn("Failed to create preview entity {}",
-                    previewEntityId, e);
-        }
-        previewEntity = created;
+        return Minecraft.getInstance().player;
     }
 
     /**
@@ -576,10 +509,6 @@ public final class LooksScreen extends ModularUIScreen {
                         && target instanceof net.minecraft.world.entity.Avatar avatar) {
                     var extracted = CosmeticsStateModifier.extract(avatar);
                     avatarState.setRenderData(LooksClient.RENDER_DATA, extracted);
-                } else if (viewMode == MODE_ENTITY
-                        && renderState instanceof LivingEntityRenderState livingState) {
-                    var extracted = CosmeticsStateModifier.bake(entries, target);
-                    livingState.setRenderData(LooksClient.RENDER_DATA, extracted);
                 }
 
                 Vector3f translation = new Vector3f(0.0F,
@@ -736,6 +665,46 @@ public final class LooksScreen extends ModularUIScreen {
         rScale.addChild(labeledFieldFlex(fScale));
         detailGroup.addChild(rScale);
 
+        // PROPERTIES section: layer (z-order), tint color, glow
+        detailGroup.addChild(blenderSection("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".section.properties"));
+        var rLayer = row();
+        rLayer.addChild(fieldLabelFixed("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".field.layer"));
+        fLayer = numberField("layer", 0);
+        fLayer.layout(l -> l.width(70).height(18));
+        rLayer.addChild(fLayer);
+        detailGroup.addChild(rLayer);
+
+        var rColor = row();
+        rColor.addChild(fieldLabelFixed("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".field.color"));
+        colorBtn = new Button();
+        colorBtn.layout(l -> l.width(56).height(14));
+        colorBtn.setOnClick(e -> {
+            if (colorPickerHost != null) {
+                colorPickerHost.setDisplay(!colorPickerHost.isDisplayed());
+            }
+        });
+        rColor.addChild(colorBtn);
+        detailGroup.addChild(rColor);
+
+        colorPickerHost = new UIElement().layout(l -> l.widthPercent(100));
+        colorPickerHost.setDisplay(false);
+        fColor = new ColorSelector();
+        fColor.layout(l -> l.width(150));
+        fColor.setOnColorChangeListener(v -> {
+            setSelectedTint(v);
+            colorPickerHost.setDisplay(false);
+        });
+        colorPickerHost.addChild(fColor);
+        detailGroup.addChild(colorPickerHost);
+
+        var rGlow = row();
+        rGlow.addChild(fieldLabelFixed("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".field.glow"));
+        fGlow = new Switch();
+        fGlow.layout(l -> l.width(30).height(12));
+        fGlow.setOnSwitchChanged(v -> setSelectedGlow(v));
+        rGlow.addChild(fGlow);
+        detailGroup.addChild(rGlow);
+
         Label hint = new Label();
         hint.setText(Component.translatable("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".edit_hint")
                 .withStyle(ChatFormatting.DARK_GRAY));
@@ -767,8 +736,125 @@ public final class LooksScreen extends ModularUIScreen {
         saveBtn.layout(l -> l.flex(1).height(15));
         actions.addChild(saveBtn);
         panel.addChild(actions);
+        panel.addChild(buildCameraPanel());
+        panel.addChild(buildQuickPanel());
+        panel.addChild(buildPresetsPanel());
         panel.addChild(hint);
         return panel;
+    }
+
+    // ------------------------------------------------------------------
+    //  Right column: permanent panels (viewport camera, quick actions, presets)
+    // ------------------------------------------------------------------
+
+    private UIElement buildCameraPanel() {
+        var panelEl = new UIElement();
+        panelEl.addChild(blenderSection("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".section.view"));
+
+        camYawS = (Slider.Horizontal) labeledSlider(
+                "gui." + dev.originsx.looks.LooksMod.MOD_ID + ".cam.yaw", camYawS());
+        panelEl.addChild(camYawS);
+
+        camPitchS = (Slider.Horizontal) labeledSlider(
+                "gui." + dev.originsx.looks.LooksMod.MOD_ID + ".cam.pitch", camPitchS());
+        panelEl.addChild(camPitchS);
+
+        camZoomS = (Slider.Horizontal) labeledSlider(
+                "gui." + dev.originsx.looks.LooksMod.MOD_ID + ".cam.zoom", camZoomS());
+        panelEl.addChild(camZoomS);
+
+        var rReset = row();
+        Button resetView = smallButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".reset_view",
+                this::resetView);
+        resetView.layout(l -> l.flex(1).height(15));
+        rReset.addChild(resetView);
+        panelEl.addChild(rReset);
+        return panelEl;
+    }
+
+    private Slider.Horizontal camYawS() {
+        var s = new Slider.Horizontal();
+        s.setRange(VP_YAW_MIN, VP_YAW_MAX).setValue(vpYaw);
+        s.setOnValueChanged(v -> vpYaw = wrapYaw(v));
+        return s;
+    }
+
+    private Slider.Horizontal camPitchS() {
+        var s = new Slider.Horizontal();
+        s.setRange(-VP_PITCH_LIMIT, VP_PITCH_LIMIT).setValue(vpPitch);
+        s.setOnValueChanged(v -> vpPitch = v);
+        return s;
+    }
+
+    private Slider.Horizontal camZoomS() {
+        var s = new Slider.Horizontal();
+        s.setRange(8, 80).setValue(vpZoom);
+        s.setOnValueChanged(v -> vpZoom = v);
+        return s;
+    }
+
+    private void resetView() {
+        vpYaw = 25f;
+        vpPitch = -10f;
+        vpZoom = 30f;
+        if (camYawS != null) camYawS.setValue(vpYaw);
+        if (camPitchS != null) camPitchS.setValue(vpPitch);
+        if (camZoomS != null) camZoomS.setValue(vpZoom);
+    }
+
+    private static UIElement labeledSlider(String key, Slider.Horizontal slider) {
+        var rowEl = row();
+        Label lb = fieldLabelFixed(key);
+        lb.layout(l -> l.width(76));
+        slider.layout(l -> l.flex(1).height(12));
+        slider.sliderStyle(s -> s.trackSize(3).handleSize(6).sliderStep(0.04f));
+        rowEl.addChild(lb);
+        rowEl.addChild(slider);
+        return rowEl;
+    }
+
+    private UIElement buildQuickPanel() {
+        var panelEl = new UIElement();
+        panelEl.addChild(blenderSection("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".section.quick"));
+        var top = row();
+        Button mirrorBtn = smallButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".mirror",
+                this::mirrorSelected);
+        mirrorBtn.layout(l -> l.flex(1).height(15));
+        top.addChild(mirrorBtn);
+        Button centerBtn = smallButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".center",
+                this::centerSelected);
+        centerBtn.layout(l -> l.flex(1).height(15));
+        top.addChild(centerBtn);
+        Button resetTr = smallButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".reset_transform",
+                this::resetSelectedTransform);
+        resetTr.layout(l -> l.flex(1).height(15));
+        top.addChild(resetTr);
+        panelEl.addChild(top);
+
+        var bottom = row();
+        Button dup = smallButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".duplicate",
+                this::duplicateSelected);
+        dup.layout(l -> l.flex(1).height(15));
+        bottom.addChild(dup);
+        panelEl.addChild(bottom);
+        return panelEl;
+    }
+
+    private UIElement buildPresetsPanel() {
+        var panelEl = new UIElement();
+        panelEl.addChild(blenderSection("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".section.presets"));
+        var row1 = row();
+        var row2 = row();
+        int i = 0;
+        for (Preset preset : PRESETS) {
+            Button btn = smallButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".preset." + preset.key,
+                    () -> addPreset(preset));
+            btn.layout(l -> l.flex(1).height(15));
+            (i++ < 3 ? row1 : row2).addChild(btn);
+        }
+        panelEl.addChild(row1);
+        panelEl.addChild(row2);
+        return panelEl;
     }
 
     /** Blender panel-header strip (editor title). */
@@ -1022,6 +1108,7 @@ public final class LooksScreen extends ModularUIScreen {
         showToast("gui.copied");
     }
 
+    /** Paste a cosmetic into the current race via clipboard. */
     private void pasteEntry() {
         if (clipboard == null || clipboard.isEmpty()) {
             showToast("gui.clipboard_empty");
@@ -1036,7 +1123,9 @@ public final class LooksScreen extends ModularUIScreen {
                 copied.rot().clone(),
                 copied.scale(),
                 copied.anim(),
-                copied.zIndex()));
+                copied.zIndex(),
+                copied.tint(),
+                copied.glow()));
         selected = entries.size() - 1;
         publishPreview();
         rebuildList();
@@ -1059,8 +1148,132 @@ public final class LooksScreen extends ModularUIScreen {
                 stack != null ? stack : old.stack(),
                 pos != null ? pos : old.pos(),
                 rot != null ? rot : old.rot(),
-                Float.isNaN(scale) ? old.scale() : scale));
+                Float.isNaN(scale) ? old.scale() : scale,
+                old.anim(),
+                old.zIndex(),
+                old.tint(),
+                old.glow()));
         publishPreview();
+    }
+
+    private void setSelectedLayer(int z) {
+        Cosmetics.Entry old = selectedEntry();
+        if (old == null) {
+            return;
+        }
+        entries.set(selected, old.withLayer(z));
+        afterChange();
+    }
+
+    private void setSelectedTint(int argb) {
+        Cosmetics.Entry old = selectedEntry();
+        if (old == null) {
+            return;
+        }
+        entries.set(selected, old.withTint(argb));
+        afterChange();
+    }
+
+    private void setSelectedGlow(boolean glow) {
+        Cosmetics.Entry old = selectedEntry();
+        if (old == null) {
+            return;
+        }
+        entries.set(selected, old.withGlow(glow));
+        afterChange();
+    }
+
+    private void mirrorSelected() {
+        Cosmetics.Entry old = selectedEntry();
+        if (old == null) {
+            return;
+        }
+        float[] p = old.pos().clone();
+        float[] r = old.rot().clone();
+        p[0] = -p[0];
+        r[1] = -r[1];
+        r[2] = -r[2];
+        entries.set(selected, new Cosmetics.Entry(old.part(), old.stack(), p, r,
+                old.scale(), old.anim(), old.zIndex(), old.tint(), old.glow()));
+        afterChange();
+    }
+
+    private void centerSelected() {
+        Cosmetics.Entry old = selectedEntry();
+        if (old == null) {
+            return;
+        }
+        entries.set(selected, new Cosmetics.Entry(old.part(), old.stack(),
+                new float[]{0f, 0f, 0f}, old.rot().clone(), old.scale(),
+                old.anim(), old.zIndex(), old.tint(), old.glow()));
+        afterChange();
+    }
+
+    private void resetSelectedTransform() {
+        Cosmetics.Entry old = selectedEntry();
+        if (old == null) {
+            return;
+        }
+        entries.set(selected, new Cosmetics.Entry(old.part(), old.stack(),
+                new float[]{0f, 0f, 0f}, new float[]{0f, 0f, 0f}, 1.0f,
+                old.anim(), old.zIndex(), old.tint(), old.glow()));
+        afterChange();
+    }
+
+    private void duplicateSelected() {
+        copySelected();
+        pasteEntry();
+    }
+
+    private void afterChange() {
+        publishPreview();
+        rebuildList();
+        fillFields();
+    }
+
+    // ------------------------------------------------------------------
+    //  Part presets (quick-add templates)
+    // ------------------------------------------------------------------
+
+    private record Preset(String key, String itemId, String part,
+                          float[] pos, float[] rot, float scale, int tint, boolean glow) {
+    }
+
+    private static final List<Preset> PRESETS = List.of(
+            new Preset("crown", "minecraft:gold_ingot", "head",
+                    new float[]{0f, 0.55f, 0f}, new float[]{0f, 0f, 0f}, 1.0f,
+                    Cosmetics.Entry.DEFAULT_TINT, true),
+            new Preset("halo", "minecraft:glowstone", "head",
+                    new float[]{0f, 0.85f, 0f}, new float[]{0f, 0f, 0f}, 1.0f,
+                    Cosmetics.Entry.DEFAULT_TINT, true),
+            new Preset("mask", "minecraft:paper", "head",
+                    new float[]{0f, 0.25f, 0.5f}, new float[]{0f, 0f, 0f}, 1.1f,
+                    Cosmetics.Entry.DEFAULT_TINT, false),
+            new Preset("cape", "minecraft:red_banner", "cape",
+                    new float[]{0f, 0f, 0f}, new float[]{90f, 0f, 0f}, 1.6f,
+                    Cosmetics.Entry.DEFAULT_TINT, false),
+            new Preset("emblem", "minecraft:diamond", "body",
+                    new float[]{0f, 0.7f, 0.4f}, new float[]{0f, 0f, 0f}, 0.8f,
+                    Cosmetics.Entry.DEFAULT_TINT, true),
+            new Preset("pauldron", "minecraft:shield", "left_arm",
+                    new float[]{-0.55f, 0.8f, 0f}, new float[]{0f, 0f, 90f}, 1.2f,
+                    Cosmetics.Entry.DEFAULT_TINT, false));
+
+    private void addPreset(Preset preset) {
+        ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.getValue(
+                Identifier.fromNamespaceAndPath("minecraft", preset.itemId)));
+        if (stack.isEmpty()) {
+            return;
+        }
+        Cosmetics.Part part = Cosmetics.Part.byName(preset.part);
+        if (part == null) {
+            part = Cosmetics.Part.HEAD;
+        }
+        entries.add(new Cosmetics.Entry(part, stack,
+                preset.pos.clone(), preset.rot.clone(), preset.scale,
+                Cosmetics.AnimConfig.DEFAULT, 0, preset.tint, preset.glow));
+        selected = entries.size() - 1;
+        afterChange();
     }
 
     private void applyNumberField(String key, String value) {
@@ -1086,6 +1299,15 @@ public final class LooksScreen extends ModularUIScreen {
                     float parsed = Float.parseFloat(value.trim());
                     if (parsed > 0.01f && parsed < 100f) {
                         updateSelected(null, null, null, null, parsed);
+                    }
+                } catch (NumberFormatException ignored) {
+                }
+            }
+            case "layer" -> {
+                try {
+                    int parsed = Integer.parseInt(value.trim());
+                    if (parsed >= -1024 && parsed <= 1024) {
+                        setSelectedLayer(parsed);
                     }
                 } catch (NumberFormatException ignored) {
                 }
@@ -1124,6 +1346,12 @@ public final class LooksScreen extends ModularUIScreen {
             fRy.setText(fmt(entry.rot()[1]));
             fRz.setText(fmt(entry.rot()[2]));
             fScale.setText(fmt(entry.scale()));
+            fLayer.setText(fmt(entry.zIndex()));
+            if (fColor != null) fColor.setColor(entry.tint(), false);
+            if (colorBtn != null) {
+                colorBtn.style(s -> s.background(new ColorRectTexture(entry.tint())));
+            }
+            if (fGlow != null) fGlow.setOn(entry.glow(), false);
         } finally {
             loadingFields = false;
         }
@@ -1135,10 +1363,6 @@ public final class LooksScreen extends ModularUIScreen {
     }
 
     private void closeWithoutSaving() {
-        if (previewEntity != null && !previewEntity.isRemoved()) {
-            previewEntity.discard();
-            previewEntity = null;
-        }
         LooksClient.clearPreviewFor(raceId);
         Minecraft.getInstance().setScreenAndShow(null);
     }
@@ -1173,14 +1397,6 @@ public final class LooksScreen extends ModularUIScreen {
                 root.remove("cosmetics");
             } else {
                 root.add("cosmetics", Cosmetics.toJson(entries));
-            }
-            // bind the race to the entity form chosen in the viewport (entity mode)
-            boolean entityForm = viewMode == MODE_ENTITY && previewEntityId != null
-                    && BuiltInRegistries.ENTITY_TYPE.get(Identifier.tryParse(previewEntityId)) != null;
-            if (entityForm) {
-                root.addProperty("model_entity", previewEntityId);
-            } else {
-                root.remove("model_entity");
             }
             Files.writeString(raceFile, PRETTY.toJson(root), StandardCharsets.UTF_8);
             server.execute(() -> server.getCommands().performPrefixedCommand(

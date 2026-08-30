@@ -7,9 +7,5 @@
   "injectors": {
     "defaultRequire": 1
   },
-  "client": [
-    "CameraMixin",
-    "EntityAimMixin",
-    "WalkAnimationStateAccessor"
-  ]
+  "client": []
 }

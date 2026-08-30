@@ -52,7 +52,6 @@ public final class LooksClient {
     public static void init(IEventBus modBus) {
         modBus.addListener(LooksClient::onAddLayers);
         modBus.addListener(dev.originsx.looks.client.CosmeticsStateModifier::onRegisterModifiers);
-        dev.originsx.looks.client.EntityForm.init(modBus);
         // client state must not leak into the next world
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 LooksClient.GameEvents::onLoggingOut);
@@ -167,24 +166,6 @@ public final class LooksClient {
     /** Cosmetic count for a race id — used by the editor header ("N items"). */
     public static int countFor(Race race) {
         return ofRace(race).size();
-    }
-
-    /**
-     * The race's bound entity model (full-transformation form), or null.
-     * Read from the race JSON {@code "model_entity"} field (e.g.
-     * {@code "minecraft:axolotl"}); the local player with such a race should
-     * render as that entity. The editor picks it via the viewport entity mode.
-     */
-    @Nullable
-    public static Identifier modelEntityFor(Race race) {
-        if (race == null || !race.getSourceJson().has("model_entity")) {
-            return null;
-        }
-        try {
-            return Identifier.tryParse(race.getSourceJson().get("model_entity").getAsString());
-        } catch (Exception e) {
-            return null;
-        }
     }
 
     // ------------------------------------------------------------------

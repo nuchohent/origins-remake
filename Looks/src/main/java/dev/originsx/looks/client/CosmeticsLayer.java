@@ -38,6 +38,9 @@ public final class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerM
      */
     private static final float PX_PER_UNIT = 2f;
 
+    /** Full block+sky light (0xF000F0) used for glowing cosmetics. */
+    private static final int FULL_BRIGHT_LIGHT = 0xF000F0;
+
     /** Model units the head bone pivot is below the crown (skull is ~8 px tall). */
     private static final float HEAD_BASE_LIFT = 6f;
 
@@ -77,8 +80,10 @@ public final class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerM
                 .sorted(Comparator.comparingInt(e -> e.entry().zIndex()))
                 .toList();
         for (CosmeticsStateModifier.Extracted data : sorted) {
+            int entryLight = data.entry().glow() ? FULL_BRIGHT_LIGHT : light;
+            int tint = state.outlineColor != 0 ? state.outlineColor : data.entry().tint();
             if (data.entry().part() == Cosmetics.Part.CAPE) {
-                renderCape(poseStack, collector, light, data, state);
+                renderCape(poseStack, collector, light, tint, data, state);
                 continue;
             }
             ModelPart bone = bone(model, data.entry().part());
@@ -89,19 +94,19 @@ public final class CosmeticsLayer extends RenderLayer<AvatarRenderState, PlayerM
             bone.translateAndRotate(poseStack);
             applyTransform(poseStack, data.entry());
             data.itemState().submit(poseStack, collector, light,
-                    OverlayTexture.NO_OVERLAY, state.outlineColor);
+                    OverlayTexture.NO_OVERLAY, tint);
             poseStack.popPose();
         }
     }
 
-    private void renderCape(PoseStack poseStack, SubmitNodeCollector collector, int light,
+    private void renderCape(PoseStack poseStack, SubmitNodeCollector collector, int light, int tint,
                              CosmeticsStateModifier.Extracted data, AvatarRenderState state) {
         poseStack.pushPose();
         // Cape attaches to body bone - translate to the back
         poseStack.translate(CAPE_OFFSET_X * PX_PER_UNIT, CAPE_OFFSET_Y * PX_PER_UNIT, CAPE_OFFSET_Z * PX_PER_UNIT);
         applyTransform(poseStack, data.entry());
         data.itemState().submit(poseStack, collector, light,
-                OverlayTexture.NO_OVERLAY, state.outlineColor);
+                OverlayTexture.NO_OVERLAY, tint);
         poseStack.popPose();
     }
 

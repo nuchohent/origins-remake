@@ -70,22 +70,39 @@ public final class Cosmetics {
 
     /** One attached cosmetic: item + bone + transform + animation. */
     public record Entry(Part part, ItemStack stack, float[] pos, float[] rot, float scale,
-                        AnimConfig anim, int zIndex) {
+                        AnimConfig anim, int zIndex, int tint, boolean glow) {
+
+        /** Default tint = opaque white (still the ordinary ARGB int -1). */
+        public static final int DEFAULT_TINT = 0xFFFFFFFF;
 
         public Entry {
             if (anim == null) anim = AnimConfig.DEFAULT;
             if (zIndex < Integer.MIN_VALUE) zIndex = 0;
+            if (tint == 0) tint = DEFAULT_TINT;
         }
 
         public Entry with(Part newPart, ItemStack newStack,
                           float[] newPos, float[] newRot, float newScale,
                           AnimConfig newAnim, int newZIndex) {
-            return new Entry(newPart, newStack, newPos, newRot, newScale, newAnim, newZIndex);
+            return new Entry(newPart, newStack, newPos, newRot, newScale,
+                    newAnim, newZIndex, tint, glow);
         }
 
-        /** Legacy constructor without anim/zIndex (backward compat). */
+        /** Legacy constructor without anim/zIndex/tint/glow (backward compat). */
         public Entry(Part part, ItemStack stack, float[] pos, float[] rot, float scale) {
-            this(part, stack, pos, rot, scale, AnimConfig.DEFAULT, 0);
+            this(part, stack, pos, rot, scale, AnimConfig.DEFAULT, 0, DEFAULT_TINT, false);
+        }
+
+        public Entry withLayer(int zIndex) {
+            return new Entry(part, stack, pos, rot, scale, anim, zIndex, tint, glow);
+        }
+
+        public Entry withTint(int newTint) {
+            return new Entry(part, stack, pos, rot, scale, anim, zIndex, newTint, glow);
+        }
+
+        public Entry withGlow(boolean newGlow) {
+            return new Entry(part, stack, pos, rot, scale, anim, zIndex, tint, newGlow);
         }
     }
 
@@ -113,6 +130,12 @@ public final class Cosmetics {
             }
             if (entry.zIndex() != 0) {
                 json.addProperty("zIndex", entry.zIndex());
+            }
+            if (entry.tint() != Entry.DEFAULT_TINT) {
+                json.addProperty("tint", entry.tint());
+            }
+            if (entry.glow()) {
+                json.addProperty("glow", true);
             }
             array.add(json);
         }
@@ -144,6 +167,9 @@ public final class Cosmetics {
             }
             AnimConfig anim = parseAnim(json);
             int zIndex = json.has("zIndex") ? json.get("zIndex").getAsInt() : 0;
+            int tint = json.has("tint") ? json.get("tint").getAsInt() : Entry.DEFAULT_TINT;
+            if (tint == 0) tint = Entry.DEFAULT_TINT;
+            boolean glow = json.has("glow") && json.get("glow").getAsBoolean();
             entries.add(new Entry(
                     part,
                     new ItemStack(item),
@@ -151,7 +177,9 @@ public final class Cosmetics {
                     vecOr(json, "rot", new float[]{0f, 0f, 0f}),
                     floatOr(json, "scale", 1.0f),
                     anim,
-                    zIndex));
+                    zIndex,
+                    tint,
+                    glow));
         }
         return entries;
     }

@@ -18,7 +18,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffect;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
@@ -49,18 +48,8 @@ public final class RegistryPicker extends UIElement {
     private static final int MAX_ROWS = 300;
 
     public enum Kind {
-        ITEM, ENTITY, EFFECT
+        ITEM, EFFECT
     }
-
-    /**
-     * Living entities whose vanilla {@link net.minecraft.world.entity.MobCategory}
-     * is MISC: everything else in MISC is a boat/minecart/painting/display and
-     * makes no sense as a preview model.
-     */
-    private static final java.util.Set<String> LIVING_MISC = java.util.Set.of(
-            "armor_stand", "iron_golem", "snow_golem", "ender_dragon");
-    /** One-shot diagnostics of the entity filter (problem: empty picker list). */
-    private static boolean loggedEntityFilter;
 
     /** One selectable registry entry. */
     public record Entry(Identifier id, Component name, @Nullable IGuiTexture texture) {
@@ -137,10 +126,6 @@ public final class RegistryPicker extends UIElement {
                     ? entry(BuiltInRegistries.ITEM.getKey(BuiltInRegistries.ITEM.get(loc).get().value()),
                     new ItemStack(BuiltInRegistries.ITEM.get(loc).get().value()))
                     : null;
-            case ENTITY -> BuiltInRegistries.ENTITY_TYPE.get(loc).isPresent()
-                    ? entry(BuiltInRegistries.ENTITY_TYPE.getKey(BuiltInRegistries.ENTITY_TYPE.get(loc).get().value()),
-                    BuiltInRegistries.ENTITY_TYPE.get(loc).get().value())
-                    : null;
             case EFFECT -> BuiltInRegistries.MOB_EFFECT.get(loc).isPresent()
                     ? entry(BuiltInRegistries.MOB_EFFECT.getKey(BuiltInRegistries.MOB_EFFECT.get(loc).get().value()),
                     BuiltInRegistries.MOB_EFFECT.get(loc).get().value())
@@ -159,18 +144,6 @@ public final class RegistryPicker extends UIElement {
         return new Entry(id, effect.getDisplayName(), SpriteTexture.of(texture));
     }
 
-    private static Entry entry(Identifier id, EntityType<?> type) {
-        // spawn egg icon when the mod provides one (<entity>_spawn_egg)
-        ItemStack icon = null;
-        Identifier egg = Identifier.fromNamespaceAndPath(id.getNamespace(), id.getPath() + "_spawn_egg");
-        var eggItem = BuiltInRegistries.ITEM.get(egg);
-        if (eggItem.isPresent()) {
-            icon = new ItemStack(eggItem.get().value());
-        }
-        return new Entry(id, type.getDescription(),
-                icon != null ? new ItemStackTexture(icon) : null);
-    }
-
     private List<Entry> allEntries() {
         if (kind == Kind.ITEM && selectedCategory > 0 && selectedCategory < categories.size()) {
             return categories.get(selectedCategory).entries();
@@ -179,47 +152,11 @@ public final class RegistryPicker extends UIElement {
         switch (kind) {
             case ITEM -> BuiltInRegistries.ITEM.forEach(item ->
                     list.add(entry(BuiltInRegistries.ITEM.getKey(item), new ItemStack(item))));
-            case ENTITY -> BuiltInRegistries.ENTITY_TYPE.forEach(type -> {
-                Identifier id = BuiltInRegistries.ENTITY_TYPE.getKey(type);
-                // EntityType.getBaseClass() returns plain Entity.class for EVERY
-                // type in 26.2 (EntityType.java:485), so a
-                // LivingEntity.isAssignableFrom(getBaseClass()) filter rejects
-                // everything and the list is always empty. MobCategory is the
-                // reliable living/non-living signal; the MISC bucket also holds
-                // a few living mobs, restored via the explicit allowlist.
-                net.minecraft.world.entity.MobCategory category = type.getCategory();
-                boolean living = category != net.minecraft.world.entity.MobCategory.MISC
-                        || LIVING_MISC.contains(id.getPath());
-                if (!loggedEntityFilter && list.size() < 5) {
-                    // one-shot diagnostics of the filter (first few types)
-                    dev.originsx.looks.LooksMod.LOGGER.info(
-                            "[Looks] entity filter sample: {} category={} living={}",
-                            id, category, living);
-                }
-                // the player type is not summonable; only living mobs make
-                // sense as a target model — no boats/minecarts/paintings
-                if (!id.getPath().equals("player") && living) {
-                    list.add(entry(id, type));
-                }
-            });
             case EFFECT -> BuiltInRegistries.MOB_EFFECT.forEach(effect ->
                     list.add(entry(BuiltInRegistries.MOB_EFFECT.getKey(effect), effect)));
         }
         list.sort((a, b) -> a.name().getString().compareToIgnoreCase(b.name().getString()));
-        logEntityFilterSummary(list);
         return list;
-    }
-
-    private void logEntityFilterSummary(List<Entry> list) {
-        if (loggedEntityFilter || kind != Kind.ENTITY) {
-            return;
-        }
-        loggedEntityFilter = true;
-        dev.originsx.looks.LooksMod.LOGGER.info(
-                "[Looks] entity picker built: {} living types (first: {})",
-                list.size(),
-                list.stream().limit(5).map(e -> e.id().toString())
-                        .reduce((a, b) -> a + ", " + b).orElse("<none>"));
     }
 
     /**
