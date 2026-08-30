@@ -254,38 +254,45 @@ public final class LayoutEditor {
         return false;
     }
 
-    /** True when the element occupies (nearly) its whole parent — used to skip
-     *  full-screen layout wrappers that should never be dragged as a block. */
-    private static boolean fillsParent(UIElement el) {
-        UIElement parent = el.getParent();
-        if (parent == null) {
-            return false;
+    /** The full screen root child the whole workspace sits in: the working-area
+     *  canvas. It is never selectable as a block (it would drag everything). */
+    @Nullable
+    private UIElement canvasChild() {
+        UIElement largest = null;
+        float bestArea = 0;
+        for (UIElement child : root.getChildren()) {
+            if (child == overlay) {
+                continue;
+            }
+            float area = child.getSizeWidth() * child.getSizeHeight();
+            if (area > bestArea) {
+                bestArea = area;
+                largest = child;
+            }
         }
-        return el.getSizeWidth() >= parent.getSizeWidth() - 2
-                && el.getSizeHeight() >= parent.getSizeHeight() - 2
-                && Math.abs(el.getPositionX() - parent.getPositionX()) <= 1
-                && Math.abs(el.getPositionY() - parent.getPositionY()) <= 1;
+        return largest;
     }
 
     /** Climb a hit leaf to the nearest block container (a root child like the
-     *  header, or a panel inside the working area). A full-screen wrapper that
-     *  fills its parent is never selected, so grabbing a slider moves the one
+     *  header, or a panel inside the working area). The full-screen working
+     *  area canvas is never selected, so grabbing a slider moves the one
      *  panel, not the whole screen. */
     private UIElement climbToTop(UIElement el) {
+        UIElement canvas = canvasChild();
+        if (el == canvas) {
+            // click on an empty spot of the canvas itself (panel gaps)
+            return null;
+        }
         UIElement best = el;
-        for (UIElement cur = el.getParent(); cur != null; cur = cur.getParent()) {
-            if (cur == root || insideOverlay(cur)) {
-                break;
-            }
-            if (cur.getParent() == root) {
-                if (fillsParent(cur)) {
-                    // full-screen layout canvas — keep the child block
-                    break;
-                }
-                best = cur;
+        for (UIElement cur = el.getParent(); cur != null && cur != root;
+                cur = cur.getParent()) {
+            if (insideOverlay(cur) || cur == canvas) {
                 break;
             }
             best = cur;
+            if (cur.getParent() == root) {
+                break;
+            }
         }
         return best;
     }
