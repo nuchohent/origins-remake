@@ -108,6 +108,16 @@ public final class RaceCommands {
                                             () -> Component.translatable("raceapi.command.clear",
                                                     player.getName().getString()), false);
                                     return 1;
-                                }))));
+                                })
+                                .then(Commands.argument("layer", com.mojang.brigadier.arguments.StringArgumentType.word())
+                                        .executes(context -> {
+                                            ServerPlayer player = EntityArgument.getPlayer(context, "player");
+                                            String layer = com.mojang.brigadier.arguments.StringArgumentType.getString(context, "layer");
+                                            RaceManager.clearLayer(player, layer);
+                                            context.getSource().sendSuccess(
+                                                    () -> Component.translatable("raceapi.command.clear_layer",
+                                                            player.getName().getString(), layer), false);
+                                            return 1;
+                                        })))));
     }
 }

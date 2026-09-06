@@ -29,13 +29,13 @@ import java.util.regex.Pattern;
  * Loads skill tree definitions from {@code data/<namespace>/skilltree/*.json}.
  * <pre>{@code
  * {
- *   "race": "raceapi:dryad",
- *   "title": "tree.originsx_skilltree.dryad",
+ *   "race": "namespace:race_id",
+ *   "title": "tree.originsx_skilltree.title_key",
  *   "nodes": [
  *     {
- *       "id": "dryad_day_boost",
+ *       "id": "example_node",
  *       "index": 0,
- *       "power": {"type": "day_boost", "difficulty": 1},
+ *       "power": {"type": "attribute", "attribute": "minecraft:generic.max_health", "amount": 2, "operation": "add_value"},
  *       "x": 0, "y": 0,
  *       "requires": [],
  *       "cost": [2, 3, 5]

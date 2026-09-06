@@ -6,6 +6,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.Map;
 import java.util.Optional;
 
@@ -74,5 +76,27 @@ public final class RaceRegistry {
     /** Races visible in the selection GUI (not hidden). */
     public static Collection<Race> playable() {
         return all().stream().filter(race -> !race.isHidden()).toList();
+    }
+
+    /**
+     * All distinct origin layers across every registered race, in first-seen
+     * order (default {@code "origin"} first when any race uses it).
+     */
+    public static Set<String> layers() {
+        Set<String> layers = new LinkedHashSet<>();
+        for (Race race : all()) {
+            layers.add(race.getLayer());
+        }
+        return layers;
+    }
+
+    /** Races that belong to the given layer. */
+    public static Collection<Race> layer(String layer) {
+        return all().stream().filter(race -> race.getLayer().equals(layer)).toList();
+    }
+
+    /** Non-hidden races of the given layer (what the GUI shows for it). */
+    public static Collection<Race> playable(String layer) {
+        return layer(layer).stream().filter(race -> !race.isHidden()).toList();
     }
 }

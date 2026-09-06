@@ -32,6 +32,7 @@ public final class SimpleRace implements Race {
     private float scale = 1.0f;
     private double width = 0.6;
     private double height = 1.8;
+    private String layer = "origin";
     private boolean hidden;
     private Consumer<ServerPlayer> onSelect;
     private Consumer<ServerPlayer> onRemove;
@@ -142,6 +143,16 @@ public final class SimpleRace implements Race {
 
     public SimpleRace height(double height) {
         this.height = height;
+        return this;
+    }
+
+    @Override
+    public String getLayer() {
+        return layer;
+    }
+
+    public SimpleRace layer(String layer) {
+        this.layer = layer == null || layer.isBlank() ? "origin" : layer;
         return this;
     }
 

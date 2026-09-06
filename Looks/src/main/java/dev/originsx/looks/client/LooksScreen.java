@@ -22,8 +22,11 @@ import com.lowdragmc.lowdraglib2.gui.ui.elements.Switch;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.TextField;
 import com.lowdragmc.lowdraglib2.gui.ui.event.UIEvents;
 import com.lowdragmc.lowdraglib2.gui.ui.rendering.GUIContext;
+import dev.raceapi.race.Race;
+import dev.raceapi.race.RaceRegistry;
 import dev.vfyjxf.taffy.style.AlignItems;
 import dev.vfyjxf.taffy.style.FlexDirection;
+import dev.vfyjxf.taffy.style.TaffyPosition;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
@@ -42,6 +45,7 @@ import net.minecraft.world.entity.player.PlayerModelType;
 import net.minecraft.world.entity.player.PlayerSkin;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.LevelResource;
+import java.io.IOException;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import org.joml.Quaternionf;
@@ -89,6 +93,10 @@ public final class LooksScreen extends ModularUIScreen {
     private static final ThreadLocal<UIElement> ROOT_HOLDER = new ThreadLocal<>();
 
     private final String raceId;
+    /** Top-level UI container, used to mount the save-target race picker. */
+    private UIElement rootEl;
+    /** Race-picker overlay opened by the Save button, or null while closed. */
+    private UIElement saveRaceOverlay;
     private final List<Cosmetics.Entry> entries = new ArrayList<>();
     private Integer selected;
 
@@ -159,6 +167,7 @@ public final class LooksScreen extends ModularUIScreen {
         loadExisting();
         UIElement root = ROOT_HOLDER.get();
         ROOT_HOLDER.remove();
+        rootEl = root;
         populateRoot(root);
         layoutEditor = LayoutEditor.attach(root);
         rebuildList();
@@ -769,7 +778,7 @@ public final class LooksScreen extends ModularUIScreen {
         // the Blender-style "get rid of the item's parameters" escape hatch.
         var footer = row();
         Button saveBtn = smallButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".save",
-                this::saveCosmetics);
+                this::openSaveRaceDialog);
         saveBtn.layout(l -> l.flex(1).height(15));
         footer.addChild(saveBtn);
         Button clearBtn = smallButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".clear",
@@ -1414,25 +1423,146 @@ public final class LooksScreen extends ModularUIScreen {
     }
 
     // ------------------------------------------------------------------
+    //  Save target picker: ask which race receives the appearance
+    // ------------------------------------------------------------------
+
+    private void openSaveRaceDialog() {
+        if (rootEl == null || saveRaceOverlay != null) {
+            return;
+        }
+
+        var overlay = new UIElement();
+        overlay.layout(l -> l.positionType(TaffyPosition.ABSOLUTE)
+                .left(0).top(0).widthPercent(100).heightPercent(100));
+        saveRaceOverlay = overlay;
+
+        float w = rootEl.getSizeWidth();
+        float h = rootEl.getSizeHeight();
+        float panelW = 340;
+        float panelH = 270;
+
+        var panel = new UIElement();
+        panel.style(s -> s.background(new ColorRectTexture(PANEL_BG)));
+        panel.layout(l -> l.positionType(TaffyPosition.ABSOLUTE)
+                .width(panelW).height(panelH)
+                .left(Math.max(0, (w - panelW) / 2))
+                .top(Math.max(0, (h - panelH) / 2))
+                .flexDirection(FlexDirection.COLUMN).gapAll(4).paddingAll(6));
+
+        Label title = new Label();
+        title.setText(Component.translatable("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".save.ask_race"));
+        title.textStyle(style -> style.fontSize(10).textColor(0xFFDDDDDD).adaptiveWidth(true));
+        panel.addChild(title);
+
+        ScrollerView scroller = new ScrollerView();
+        scroller.layout(l -> l.flex(1).widthPercent(100));
+        List<Race> races = new ArrayList<>(RaceRegistry.playable());
+        scroller.viewContainer(view -> {
+            view.layout(l -> l.widthPercent(100)
+                    .flexDirection(FlexDirection.COLUMN).gapAll(2));
+            if (races.isEmpty()) {
+                Label empty = new Label();
+                empty.setText(Component.translatable(
+                        "gui." + dev.originsx.looks.LooksMod.MOD_ID + ".save.no_races"));
+                empty.textStyle(style -> style.fontSize(9).textColor(0xFF9A9AA0));
+                empty.layout(l -> l.widthPercent(100).height(18));
+                view.addChild(empty);
+            } else {
+                for (Race race : races) {
+                    view.addChild(saveRaceRow(race));
+                }
+            }
+        });
+        panel.addChild(scroller);
+
+        var footer = row();
+        Button cancel = smallButton("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".close",
+                this::closeSaveRaceDialog);
+        cancel.layout(l -> l.flex(1).height(15));
+        footer.addChild(cancel);
+        panel.addChild(footer);
+
+        overlay.addChild(panel);
+        overlay.addEventListener(UIEvents.MOUSE_DOWN, ev -> {
+            for (UIElement ancestor = ev.target; ancestor != null;
+                 ancestor = ancestor.getParent()) {
+                if (ancestor == panel) {
+                    return;
+                }
+            }
+            closeSaveRaceDialog();
+        }, true);
+
+        rootEl.addChild(overlay);
+    }
+
+    private void closeSaveRaceDialog() {
+        if (saveRaceOverlay != null) {
+            UIElement host = saveRaceOverlay.getParent();
+            if (host != null) {
+                host.removeChild(saveRaceOverlay);
+            }
+            saveRaceOverlay = null;
+        }
+    }
+
+    /** One selectable race row: the destination of the save. */
+    private Button saveRaceRow(Race race) {
+        Button row = new Button();
+        row.noText();
+        row.layout(l -> l.widthPercent(100).height(20)
+                .flexDirection(FlexDirection.ROW).gapAll(4)
+                .alignItems(AlignItems.CENTER));
+        boolean current = race.getId().toString().equals(raceId);
+        row.style(s -> s.background(new ColorRectTexture(current ? 0xFF3D5C8A : 0xFF2B2B33)));
+        UIElement icon = new UIElement();
+        icon.layout(l -> l.width(16).height(16));
+        icon.style(s -> s.backgroundTexture(new ItemStackTexture(race.getIcon())));
+        row.addChild(icon);
+        Label label = new Label();
+        label.setText(race.getDisplayName());
+        label.textStyle(style -> style.fontSize(9).textColor(0xFFDDDDDD));
+        label.layout(l -> l.flex(1));
+        row.addChild(label);
+        row.style(s -> s.tooltips(Component.literal(race.getId().toString())));
+        row.setOnClick(e -> {
+            closeSaveRaceDialog();
+            saveCosmeticsFor(race.getId().toString());
+        });
+        return row;
+    }
+
+    // ------------------------------------------------------------------
     //  Save into the world datapack
     // ------------------------------------------------------------------
 
-    private void saveCosmetics() {
+    private void saveCosmeticsFor(String targetRaceId) {
         Minecraft mc = Minecraft.getInstance();
         MinecraftServer server = mc.getSingleplayerServer();
         if (server == null) {
             showToast("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".save.singleplayer_only");
             return;
         }
-        Identifier id = Identifier.tryParse(raceId);
+        Identifier id = Identifier.tryParse(targetRaceId);
         if (id == null) {
             showToast("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".save.failed");
             return;
         }
         Path raceFile = findRaceFile(server, id);
         if (raceFile == null) {
-            showToast("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".save.not_found");
-            return;
+            // Built-in/demo races ship inside the mod jar (read-only). Copy the
+            // race JSON into a world datapack — world datapacks load after the
+            // jars, so this copy wins and becomes writable.
+            try {
+                raceFile = materializeRaceFile(server, id);
+            } catch (IOException e) {
+                dev.originsx.looks.LooksMod.LOGGER.error("Failed to materialize race {} for saving", id, e);
+                raceFile = null;
+            }
+            if (raceFile == null) {
+                showToast("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".save.failed");
+                return;
+            }
         }
         try {
             JsonObject root;
@@ -1451,9 +1581,34 @@ public final class LooksScreen extends ModularUIScreen {
             LooksClient.clearPreviewFor(raceId);
             showToast("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".save.done");
         } catch (Exception e) {
-            dev.originsx.looks.LooksMod.LOGGER.error("Failed to save cosmetics for {}", raceId, e);
+            dev.originsx.looks.LooksMod.LOGGER.error("Failed to save cosmetics for {}", targetRaceId, e);
             showToast("gui." + dev.originsx.looks.LooksMod.MOD_ID + ".save.failed");
         }
+    }
+
+    /**
+     * Copies a race JSON (from the loaded registry) into a writable world
+     * datapack so cosmetics can be stored for jar-shipped races.
+     */
+    private static Path materializeRaceFile(MinecraftServer server, Identifier raceId) throws IOException {
+        Race race = RaceRegistry.getOrNull(raceId);
+        if (race == null) {
+            return null;
+        }
+        Path packDir = server.getWorldPath(LevelResource.DATAPACK_DIR).resolve(
+                dev.originsx.looks.LooksMod.MOD_ID);
+        Path raceFile = packDir.resolve("data").resolve(raceId.getNamespace())
+                .resolve("raceapi").resolve("races").resolve(raceId.getPath() + ".json");
+        Files.createDirectories(raceFile.getParent());
+        Files.writeString(raceFile, PRETTY.toJson(race.getSourceJson()), StandardCharsets.UTF_8);
+        Path meta = packDir.resolve("pack.mcmeta");
+        if (!Files.exists(meta)) {
+            Files.writeString(meta, "{\n  \"pack\": {\n    \"pack_format\": 90,\n"
+                    + "    \"min_format\": 82,\n    \"max_format\": 999,\n"
+                    + "    \"description\": \"OriginsX Looks edits\"\n  }\n}\n",
+                    StandardCharsets.UTF_8);
+        }
+        return raceFile;
     }
 
     /**

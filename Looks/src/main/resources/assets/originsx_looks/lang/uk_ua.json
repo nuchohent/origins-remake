@@ -1,4 +1,8 @@
 {
+  "creativetab.originsx_looks": "OriginsX Looks",
+  "item.originsx_looks.look_mirror": "Дзеркало образу",
+  "item.originsx_looks.mirror.tooltip": "ПКМ — відкрити редактор зовнішності",
+  "section.originsx_looks.cosmetics": "Косметика",
   "gui.originsx_looks.add": "Додати",
   "gui.originsx_looks.close": "Закрити",
   "gui.originsx_looks.clear": "Скинути вибір",
@@ -24,6 +28,8 @@
   "gui.originsx_looks.picker.none": "Вибрати...",
   "gui.originsx_looks.picker.search": "Пошук...",
   "gui.originsx_looks.save": "Зберегти",
+  "gui.originsx_looks.save.ask_race": "Зберегти зовнішність для раси:",
+  "gui.originsx_looks.save.no_races": "Ігрових рас не знайдено",
   "gui.originsx_looks.save.done": "Зовнішність збережено та перезавантажено",
   "gui.originsx_looks.save.failed": "Не вдалося зберегти зовнішність",
   "gui.originsx_looks.save.not_found": "Файл раси не знайдено в датапаках світу",

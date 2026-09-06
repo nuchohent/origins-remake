@@ -3,6 +3,7 @@ package dev.raceapi.network;
 import dev.raceapi.player.RaceManager;
 import dev.raceapi.power.PowerCooldowns;
 import dev.raceapi.race.Power;
+import dev.raceapi.race.Race;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.PacketFlow;
@@ -35,14 +36,19 @@ public record PowerKeyPayload(int slot) implements CustomPacketPayload {
                 return;
             }
             if (context.player() instanceof ServerPlayer player) {
-                var race = RaceManager.getRace(player);
-                if (race == null) {
+                // Bound abilities span every selected origin layer; slots are
+                // assigned in layer order so each layer's active powers still
+                // address their own keybind.
+                dev.raceapi.race.Selection selection = RaceManager.getSelection(player);
+                if (selection.isEmpty()) {
                     return;
                 }
                 List<Power> bound = new ArrayList<>();
-                for (Power power : dev.raceapi.api.PowerPipeline.effective(player, race)) {
-                    if (power.hasBinding()) {
-                        bound.add(power);
+                for (Race race : selection.races()) {
+                    for (Power power : dev.raceapi.api.PowerPipeline.effective(player, race)) {
+                        if (power.hasBinding()) {
+                            bound.add(power);
+                        }
                     }
                 }
                 int slot = payload.slot();

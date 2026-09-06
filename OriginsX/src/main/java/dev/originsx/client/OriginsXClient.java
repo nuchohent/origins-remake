@@ -130,6 +130,7 @@ public final class OriginsXClient {
 
     public static void init(IEventBus modBus) {
         modBus.addListener(ModEvents::registerKeyMappings);
+        OriginsXTabs.register();
     }
 
     public static void openSelectionScreen() {

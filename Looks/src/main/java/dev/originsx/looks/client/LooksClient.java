@@ -2,7 +2,9 @@ package dev.originsx.looks.client;
 
 import com.google.gson.JsonArray;
 import dev.originsx.looks.LooksMod;
+import dev.raceapi.client.SelectedRaceClient;
 import dev.raceapi.race.Race;
+import dev.raceapi.race.RaceRegistry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.network.chat.Component;
@@ -64,6 +66,7 @@ public final class LooksClient {
         // client state must not leak into the next world
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 LooksClient.GameEvents::onLoggingOut);
+        LooksTabs.register();
     }
 
     @EventBusSubscriber(modid = LooksMod.MOD_ID, value = Dist.CLIENT)
@@ -118,12 +121,9 @@ public final class LooksClient {
     // ------------------------------------------------------------------
 
     /**
-     * Cosmetics to draw on an avatar entity:
-     * <ul>
-     *   <li>the edited race's live override wins while the editor is open</li>
-     *   <li>otherwise the SELECTED race's cosmetics (local player or any other
-     *       player via the race broadcast)</li>
-     * </ul>
+     * Cosmetics to draw on an avatar entity: the cosmetics of every selected
+     * origin layer are merged (multi-layer selections stack their looks). The
+     * edited race's live override wins while the editor is open.
      */
     public static List<Cosmetics.Entry> resolveFor(Avatar entity) {
         Minecraft mc = Minecraft.getInstance();
@@ -136,26 +136,39 @@ public final class LooksClient {
             }
         }
 
-        String raceIdStr = raceIdOf(entity);
-        if (raceIdStr == null || raceIdStr.isEmpty()) {
-            return List.of();
+        List<Cosmetics.Entry> result = new java.util.ArrayList<>();
+        for (String raceIdStr : raceIdsOf(entity)) {
+            if (raceIdStr == null || raceIdStr.isEmpty()) {
+                continue;
+            }
+            List<Cosmetics.Entry> override = OVERRIDES.get(raceIdStr);
+            if (override != null) {
+                result.addAll(override);
+                continue;
+            }
+            Identifier raceId = Identifier.tryParse(raceIdStr);
+            if (raceId == null) {
+                continue;
+            }
+            Race race = RaceRegistry.getOrNull(raceId);
+            if (race != null) {
+                result.addAll(ofRace(race));
+            }
         }
-        List<Cosmetics.Entry> override = OVERRIDES.get(raceIdStr);
-        if (override != null) {
-            return override;
-        }
-        Identifier raceId = Identifier.tryParse(raceIdStr);
-        Race race = raceId == null ? null : dev.raceapi.race.RaceRegistry.getOrNull(raceId);
-        return race == null ? List.of() : ofRace(race);
+        return result;
     }
 
-    private static String raceIdOf(Avatar entity) {
+    /** Ids of every race selected across all layers of the avatar. */
+    private static List<String> raceIdsOf(Avatar entity) {
         Minecraft mc = Minecraft.getInstance();
         if (entity == mc.player) {
-            Identifier id = dev.raceapi.client.SelectedRaceClient.getOrNull();
-            return id == null ? null : id.toString();
+            List<String> ids = new java.util.ArrayList<>();
+            for (Race race : SelectedRaceClient.getSelection().races()) {
+                ids.add(race.getId().toString());
+            }
+            return ids;
         }
-        return PlayerRaceClient.get(entity.getUUID());
+        return new java.util.ArrayList<>(PlayerRaceClient.getLayers(entity.getUUID()).values());
     }
 
     /** Parsed cosmetics of a registered race (cached per Race object). */

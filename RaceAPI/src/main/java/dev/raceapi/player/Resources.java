@@ -43,13 +43,15 @@ public final class Resources {
 
     /** The resource pool size granted by the player's race (0 = no resource). */
     public static double max(ServerPlayer player) {
-        Race race = RaceManager.getRace(player);
-        if (race == null) {
+        dev.raceapi.race.Selection selection = RaceManager.getSelection(player);
+        if (selection.isEmpty()) {
             return 0;
         }
-        for (Power power : PowerPipeline.effective(player, race)) {
-            if (power.getWrapped() instanceof ResourcePower resource) {
-                return resource.getMax();
+        for (Race race : selection.races()) {
+            for (Power power : PowerPipeline.effective(player, race)) {
+                if (power.getWrapped() instanceof ResourcePower resource) {
+                    return resource.getMax();
+                }
             }
         }
         return 0;

@@ -51,6 +51,9 @@ dependencies {
     // OriginsX compiles against it but does NOT include it in the jar
     // NeoForge enforces the version requirement at runtime via neoforge.mods.toml
     compileOnly fileTree(dir: 'libs', include: '*.jar')
+    // Fancy Tab Sections is OPTIONAL — compile-only. Sections are only registered
+    // when the game detects the standalone "fancytabsections" mod (see
+    // OriginsXTabs.register); without it the plain creative tab still works.
 }
 
 tasks.withType(ProcessResources).configureEach {

@@ -36,6 +36,7 @@ import java.util.Map;
  *   "scale": 0.9,
  *   "width": 0.5,
  *   "height": 1.7,
+ *   "layer": "origin",
  *   "powers": ["raceapi:creative_flight", "raceapi:speed"]
  * }
  * }</pre>
@@ -180,6 +181,7 @@ public class RaceDataLoader extends SimplePreparableReloadListener<Map<Identifie
                 .scale(floatOr(json, "scale", 1.0f))
                 .width(doubleOr(json, "width", 0.6))
                 .height(doubleOr(json, "height", 1.8))
+                .layer(stringOr(json, "layer", "origin"))
                 .hidden(json.has("hidden") && json.get("hidden").getAsBoolean())
                 // keep the raw definition so addons can read custom fields
                 // (e.g. "cosmetics") from the synced race on the client

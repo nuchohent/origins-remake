@@ -39,6 +39,7 @@ public final class SkillTreeClient {
         modBus.addListener(GameEvents::registerKeyMappings);
         NeoForge.EVENT_BUS.addListener(GameEvents::onKeyInput);
         NeoForge.EVENT_BUS.addListener(GameEvents::onLoggingOut);
+        SkillTreeTabs.register();
     }
 
     public static void openScreen() {

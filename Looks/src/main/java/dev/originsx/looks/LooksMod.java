@@ -27,6 +27,7 @@ public final class LooksMod {
 
     public LooksMod(IEventBus modBus) {
         modBus.addListener(LooksNetwork::register);
+        dev.originsx.looks.item.LooksItems.register(modBus);
         // broadcast every player's race so cosmetics render on all clients
         NeoForge.EVENT_BUS.addListener(dev.originsx.looks.server.PlayerRaceTracker::onPlayerLoggedIn);
         NeoForge.EVENT_BUS.addListener(dev.originsx.looks.server.PlayerRaceTracker::onPlayerLoggedOut);

@@ -7,33 +7,30 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 
 /**
- * Server side: keeps every client informed about everyone's race so the
- * Looks render layer can draw cosmetics on all visible players.
+ * Server side: keeps every client informed about everyone's multi-layer race
+ * selection so the Looks render layer can draw cosmetics on all visible
+ * players. Cosmetics from every selected layer are combined client-side.
  */
 public final class PlayerRaceTracker {
 
     private PlayerRaceTracker() {
     }
 
-    /** A joining player's race is broadcast to all (including itself). */
+    /** A joining player's race selection is broadcast to all (including itself). */
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
-            var race = RaceManager.getRace(player);
-            PlayerRacePayload.broadcast(player,
-                    race == null ? "" : race.getId().toString());
+            PlayerRacePayload.broadcast(player, RaceManager.getSelection(player));
         }
     }
 
     public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             // let remaining clients drop the stale entry
-            PlayerRacePayload.broadcast(player, "");
+            PlayerRacePayload.broadcast(player, null);
         }
     }
 
     public static void onRaceChanged(RaceChangedEvent event) {
-        var race = event.getNewRace();
-        PlayerRacePayload.broadcast(event.getPlayer(),
-                race == null ? "" : race.getId().toString());
+        PlayerRacePayload.broadcast(event.getPlayer(), RaceManager.getSelection(event.getPlayer()));
     }
 }

@@ -11,15 +11,19 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
- * Client -&gt; server request to select a race. Empty string clears the race.
+ * Client -&gt; server request to select a race. An empty race id clears the
+ * whole selection; with a non-empty {@code clearLayer} only that layer is
+ * cleared while the rest of the multi-layer selection stays.
  */
-public record SelectRacePayload(String raceId) implements CustomPacketPayload {
+public record SelectRacePayload(String raceId, String clearLayer) implements CustomPacketPayload {
 
     public static final Type<SelectRacePayload> TYPE = new Type<>(
             Identifier.fromNamespaceAndPath("originsx", "select_race"));
 
     public static final StreamCodec<FriendlyByteBuf, SelectRacePayload> STREAM_CODEC =
-            StreamCodec.composite(ByteBufCodecs.STRING_UTF8, SelectRacePayload::raceId, SelectRacePayload::new);
+            StreamCodec.composite(ByteBufCodecs.STRING_UTF8, SelectRacePayload::raceId,
+                    ByteBufCodecs.STRING_UTF8, SelectRacePayload::clearLayer,
+                    SelectRacePayload::new);
 
     public static void handle(SelectRacePayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
@@ -34,7 +38,17 @@ public record SelectRacePayload(String raceId) implements CustomPacketPayload {
                     return;
                 }
                 try {
-                    RaceManager.setRace(player, id.isEmpty() ? null : Identifier.tryParse(id));
+                    if (id.isEmpty()) {
+                        String layer = payload.clearLayer();
+                        if (layer != null && !layer.isEmpty()) {
+                            // clear only this layer's slot
+                            RaceManager.clearLayer(player, layer);
+                        } else {
+                            RaceManager.setRace(player, null);
+                        }
+                    } else {
+                        RaceManager.setRace(player, Identifier.tryParse(id));
+                    }
                 } catch (IllegalArgumentException e) {
                     // unknown race id (e.g. the race vanished via /reload while
                     // the selection screen was open): sync the actual state back

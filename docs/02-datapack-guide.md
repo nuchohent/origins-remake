@@ -22,6 +22,7 @@ Both are re-read on every `/reload`. A Java-registered race or power **always wi
 | `description` | string | `""` | Plain-text description. |
 | `description_key` | string | — | If set, a translation key is used instead of `description`. |
 | `icon` | string | empty | Item id shown as the icon, e.g. `minecraft:feather`. Empty falls back to the player head. |
+| `layer` | string | `"origin"` | Origin layer of the race. Players can have **one race per layer** selected at the same time; races in different layers stack their powers and cosmetics. Layers appear as tabs in the selection GUI. |
 | `difficulty` | int | `0` | `-5` (strong) to `+5` (weak). Purely informational. |
 | `scale` | float | `1.0` | Preview model scale in the selection GUI (visual only). |
 | `width` | double | `0.6` | Bounding box width (informational). |
@@ -36,6 +37,7 @@ Both are re-read on every `/reload`. A Java-registered race or power **always wi
   "display_name": "Avian",
   "description": "Light as a feather.",
   "icon": "minecraft:feather",
+  "layer": "origin",
   "difficulty": 3,
   "scale": 0.9,
   "width": 0.5,
@@ -43,6 +45,9 @@ Both are re-read on every `/reload`. A Java-registered race or power **always wi
   "powers": ["raceapi:creative_flight", { "type": "raceapi:safe_landing", "difficulty": 2 }]
 }
 ```
+
+A second layer (e.g. an "blessing" layer with a decorative flight race) exposes a
+second tab in the GUI and lets the player stack a flight race with a "origin" race.
 
 ---
 
@@ -125,6 +130,14 @@ Active power: teleport a short distance in the direction you look.
 | --- | --- | --- |
 | `cooldown` | int | `80` (ticks) |
 | `range` | double | `10.0` (blocks) |
+
+### `raceapi:creative_flight`
+Grants creative flight (`mayfly`) while the race is selected. Removed when the race
+is cleared, re-asserted every tick.
+
+| Field | Type | Default |
+| --- | --- | --- |
+| `difficulty` | int | `1` |
 
 ### `raceapi:safe_landing`
 No fall damage.

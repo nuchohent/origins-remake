@@ -45,6 +45,9 @@ dependencies {
     implementation "com.lowdragmc.ldlib2:ldlib2-neoforge-${minecraft_version}:${ldlib2_version}"
     // Race API as compileOnly — it is a separate mod installed alongside this addon
     compileOnly fileTree(dir: 'libs', include: '*.jar')
+    // Fancy Tab Sections is OPTIONAL — compile-only. Sections are only registered
+    // when the game detects the standalone "fancytabsections" mod (see
+    // LooksTabs.register); without it the plain creative tab still works.
 }
 
 tasks.withType(ProcessResources).configureEach {

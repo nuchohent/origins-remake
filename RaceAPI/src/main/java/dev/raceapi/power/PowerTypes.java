@@ -80,6 +80,7 @@ public final class PowerTypes {
         register("lifesteal", (id, json, difficulty) -> new LifestealPower(id, difficulty,
                 PowerFactory.getDouble(json, "fraction", 0.25)));
         register("safe_landing", (id, json, difficulty) -> new SafeLandingPower(id, difficulty));
+        register("creative_flight", (id, json, difficulty) -> new CreativeFlightPower(id, difficulty));
         register("toughness", (id, json, difficulty) -> new ToughnessPower(id, difficulty,
                 PowerFactory.getDouble(json, "reduction", 0.25)));
         register("night_boost", (id, json, difficulty) ->

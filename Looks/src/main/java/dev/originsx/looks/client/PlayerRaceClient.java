@@ -5,34 +5,35 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Client mirror of every online player's race id, updated from
- * {@link dev.originsx.looks.net.PlayerRacePayload} broadcasts.
+ * Client mirror of every online player's multi-layer race selection (one race
+ * id per origin layer), updated from {@link dev.originsx.looks.net.PlayerRacePayload}
+ * broadcasts. Cosmetics of every selected layer are combined when rendering.
  */
 public final class PlayerRaceClient {
 
-    private static final Map<UUID, String> RACES = new HashMap<>();
+    private static final Map<UUID, Map<String, String>> RACES = new HashMap<>();
 
     private PlayerRaceClient() {
     }
 
-    public static void apply(String uuid, String raceId) {
+    public static void apply(String uuid, Map<String, String> layers) {
         if (uuid == null || uuid.isEmpty()) {
             return;
         }
         try {
             UUID id = UUID.fromString(uuid);
-            if (raceId == null || raceId.isEmpty()) {
+            if (layers == null || layers.isEmpty()) {
                 RACES.remove(id);
             } else {
-                RACES.put(id, raceId);
+                RACES.put(id, new HashMap<>(layers));
             }
         } catch (IllegalArgumentException ignored) {
         }
     }
 
-    /** @return race id string of the player, or null when unknown/no race. */
-    public static String get(UUID uuid) {
-        return RACES.get(uuid);
+    /** @return layer id → race id map of the player, or an empty map when unknown/no race. */
+    public static Map<String, String> getLayers(UUID uuid) {
+        return RACES.getOrDefault(uuid, Map.of());
     }
 
     public static void clear() {

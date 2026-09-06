@@ -2443,6 +2443,7 @@ public final class RaceCreatorPanel {
                 new ParamSpec("cooldown", "originsx.creator.param.cooldown", Kind.INT, "4"),
                 new ParamSpec("range", "originsx.creator.param.range", Kind.DOUBLE, "10.0"))),
         SAFE_LANDING("safe_landing", "originsx.creator.type.safe_landing", false, List.of()),
+        CREATIVE_FLIGHT("creative_flight", "originsx.creator.type.creative_flight", false, List.of()),
         TOUGHNESS("toughness", "originsx.creator.type.toughness", false, List.of(
                 new ParamSpec("reduction", "originsx.creator.param.reduction", Kind.DOUBLE, "0.25"))),
         FIRE_AURA("fire_aura", "originsx.creator.type.fire_aura", false, List.of(
@@ -2705,7 +2706,7 @@ public final class RaceCreatorPanel {
                         VENOM_TOUCH, FIRE_AURA, FROST_AURA, DETECTOR, AIRBORNE_FRAGILITY,
                         DIRECTIONAL_EXPOSURE, KILL_REWARD -> Category.COMBAT;
                 case STEP_HEIGHT, WALL_JUMP, SPIDER_CLIMB, SPRINT_JUMP, BOUNCY, MAGNET,
-                        HYPER_INERTIA, DENSITY_ANCHOR -> Category.MOVE;
+                        HYPER_INERTIA, DENSITY_ANCHOR, CREATIVE_FLIGHT -> Category.MOVE;
                 default -> Category.WORLD;
             };
         }

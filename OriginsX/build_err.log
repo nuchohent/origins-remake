@@ -1,0 +1,48 @@
+C:\Users\dotnaccel\Documents\OriginsX\src\main\java\dev\originsx\network\SelectRacePayload.java:8: error: cannot find symbol
+import net.minecraft.network.protocol.game.PacketFlow;
+                                          ^
+  symbol:   class PacketFlow
+  location: package net.minecraft.network.protocol.game
+C:\Users\dotnaccel\Documents\OriginsX\src\main\java\dev\originsx\client\gui\RaceSelectionScreen.java:134: error: cannot find symbol
+        selectButton.setOnClick(e -> {
+                    ^
+  symbol:   method setOnClick((e)->{ Pac[...]l); })
+  location: variable selectButton of type UIElement
+C:\Users\dotnaccel\Documents\OriginsX\src\main\java\dev\originsx\client\gui\RaceSelectionScreen.java:141: error: cannot find symbol
+        resetButton.setOnClick(e -> {
+                   ^
+  symbol:   method setOnClick((e)->{ Pac[...]l); })
+  location: variable resetButton of type UIElement
+C:\Users\dotnaccel\Documents\OriginsX\src\main\java\dev\originsx\client\OriginsXClient.java:35: warning: [removal] bus() in EventBusSubscriber has been deprecated and marked for removal
+    @EventBusSubscriber(modid = OriginsX.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+                                                 ^
+C:\Users\dotnaccel\Documents\OriginsX\src\main\java\dev\originsx\client\OriginsXClient.java:35: warning: [removal] Bus in EventBusSubscriber has been deprecated and marked for removal
+    @EventBusSubscriber(modid = OriginsX.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+                                                                         ^
+C:\Users\dotnaccel\Documents\OriginsX\src\main\java\dev\originsx\client\OriginsXClient.java:46: warning: [removal] bus() in EventBusSubscriber has been deprecated and marked for removal
+    @EventBusSubscriber(modid = OriginsX.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
+                                                 ^
+C:\Users\dotnaccel\Documents\OriginsX\src\main\java\dev\originsx\client\OriginsXClient.java:46: warning: [removal] Bus in EventBusSubscriber has been deprecated and marked for removal
+    @EventBusSubscriber(modid = OriginsX.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
+                                                                         ^
+C:\Users\dotnaccel\Documents\OriginsX\src\main\java\dev\originsx\network\SelectRacePayload.java:26: error: cannot find symbol
+            if (context.flow() != PacketFlow.SERVERBOUND) {
+                                  ^
+  symbol:   variable PacketFlow
+  location: class SelectRacePayload
+Note: C:\Users\dotnaccel\Documents\OriginsX\src\main\java\dev\originsx\client\gui\PlayerPreviewElement.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+4 errors
+4 warnings
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':compileJava'.
+> Compilation failed; see the compiler error output for details.
+
+* Try:
+> Run with --info option to get more log output.
+> Run with --scan to get full insights.
+
+BUILD FAILED in 34m 49s

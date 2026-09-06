@@ -3,6 +3,7 @@ build/
 .gradle/
 run/
 runs/
+bin/
 
 # Зависимости-джары (собираются из RaceAPI, в git не нужны)
 **/libs/*.jar
@@ -13,6 +14,21 @@ _race_dump/
 
 # Нерелевантный шаблон fancyhud (см. README)
 Default Project/
+
+# --- Дикомпилированный чужой код (НЕ пушить: MLG/LowDragMC licensed) ---
+# Исходники Minecraft и LDLib2, распакованные из jar для справки по миксинам.
+net/
+com/
+assets/ldlib2/
+data/ldlib2/
+
+# Заброшенный рофл-проект OriginsUI
+OriginsUI/
+
+# LDLib2-конфиги, выдернутые в корень из jar
+META-INF/
+ldlib2.mixins.json
+kubejs.plugins.txt
 
 # --- IDE ---
 .vscode/
@@ -26,10 +42,6 @@ Default Project/
 Thumbs.db
 desktop.ini
 
-# --- Логи и краши тестовых запусков ---
-*.log
+# --- Краши тестовых запусков ---
 hs_err_pid*
 replay_pid*
-
-# Gradle логи
-logs/

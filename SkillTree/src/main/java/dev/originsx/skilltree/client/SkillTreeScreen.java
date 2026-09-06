@@ -62,14 +62,31 @@ public final class SkillTreeScreen extends ModularUIScreen {
     private static final int NODE_BG = 0xFF2E2E38;
     private static final int NODE_SELECTED = 0xFF7A5A20;
 
-    private static final int CELL = 34;
-    private static final int NODE = 26;
-    /** Free-form canvas size (FTB Quests style); scrollbars pan around it. */
-    private static final float WORLD_W = 1600;
-    private static final float WORLD_H = 1200;
+    private static int cellSize() {
+        return dev.originsx.skilltree.SkillTreeConfig.SPEC.isLoaded()
+                ? dev.originsx.skilltree.SkillTreeConfig.INSTANCE.cellSize.get() : 34;
+    }
 
-    /** Power factors per tier; mirrors TierScaler so previews match gameplay. */
-    private static final double[] TIER_FACTOR = {0.0, 0.34, 0.67, 1.0};
+    private static int nodeSize() {
+        return dev.originsx.skilltree.SkillTreeConfig.SPEC.isLoaded()
+                ? dev.originsx.skilltree.SkillTreeConfig.INSTANCE.nodeSize.get() : 26;
+    }
+
+    private static float canvasWidth() {
+        return dev.originsx.skilltree.SkillTreeConfig.SPEC.isLoaded()
+                ? dev.originsx.skilltree.SkillTreeConfig.INSTANCE.canvasWidth.get() : 1600;
+    }
+
+    private static float canvasHeight() {
+        return dev.originsx.skilltree.SkillTreeConfig.SPEC.isLoaded()
+                ? dev.originsx.skilltree.SkillTreeConfig.INSTANCE.canvasHeight.get() : 1200;
+    }
+
+    private static double[] tierFactors() {
+        double t1 = dev.originsx.skilltree.tree.TierScaler.tier1();
+        double t2 = dev.originsx.skilltree.tree.TierScaler.tier2();
+        return new double[]{0.0, t1, t2, 1.0};
+    }
 
     private static final Gson PRETTY = new GsonBuilder()
             .setPrettyPrinting().disableHtmlEscaping().create();
@@ -642,7 +659,7 @@ public final class SkillTreeScreen extends ModularUIScreen {
         }
 
         world = new UIElement();
-        world.layout(l -> l.width(WORLD_W).height(WORLD_H));
+        world.layout(l -> l.width(canvasWidth()).height(canvasHeight()));
         world.style(s -> s.background(new ColorRectTexture(0xFF14141A)));
         lineLayer = new UIElement();
         lineLayer.layout(l -> l.width(0).height(0));
@@ -670,8 +687,8 @@ public final class SkillTreeScreen extends ModularUIScreen {
         }
         final boolean legacy = legacyGrid;
         for (var node : nodes) {
-            float px = node.x() * (legacy ? CELL : 1) + 4;
-            float py = node.y() * (legacy ? CELL : 1) + 4;
+            float px = node.x() * (legacy ? cellSize() : 1) + 4;
+            float py = node.y() * (legacy ? cellSize() : 1) + 4;
             pixelPos.put(node.id(), new float[]{px, py});
             world.addChild(createNodeButton(node, px, py));
         }
@@ -690,8 +707,8 @@ public final class SkillTreeScreen extends ModularUIScreen {
                 if (e.button == 1) {
                     Vector2f local = world.getLocalMouse(e.x, e.y);
                     for (float[] pos : pixelPos.values()) {
-                        if (local.x >= pos[0] && local.x < pos[0] + NODE
-                                && local.y >= pos[1] && local.y < pos[1] + NODE) {
+                        if (local.x >= pos[0] && local.x < pos[0] + nodeSize()
+                                && local.y >= pos[1] && local.y < pos[1] + nodeSize()) {
                             return; // the node opens its own menu
                         }
                     }
@@ -718,7 +735,7 @@ public final class SkillTreeScreen extends ModularUIScreen {
                                        float px, float py) {
         UIElement button = new UIElement();
         button.layout(l -> l.positionType(TaffyPosition.ABSOLUTE)
-                .left(px).top(py).width(NODE).height(NODE));
+                .left(px).top(py).width(nodeSize()).height(nodeSize()));
         button.style(s -> s.background(new ColorRectTexture(NODE_BG)));
         UIElement icon = new UIElement();
         icon.layout(l -> l.widthPercent(100).heightPercent(100));
@@ -762,9 +779,9 @@ public final class SkillTreeScreen extends ModularUIScreen {
             return;
         }
         Vector2f local = world.getLocalMouse(event.x, event.y);
-        float nx = Math.max(0, Math.min(WORLD_W - NODE,
+        float nx = Math.max(0, Math.min(canvasWidth() - nodeSize(),
                 dragStartNodeX + local.x - dragStartMouse.x));
-        float ny = Math.max(0, Math.min(WORLD_H - NODE,
+        float ny = Math.max(0, Math.min(canvasHeight() - nodeSize(),
                 dragStartNodeY + local.y - dragStartMouse.y));
         nodeJson.addProperty("x", Math.round(nx));
         nodeJson.addProperty("y", Math.round(ny));
@@ -814,10 +831,10 @@ public final class SkillTreeScreen extends ModularUIScreen {
                 if (from == null || to == null) {
                     continue;
                 }
-                float x1 = from[0] + NODE / 2f;
-                float y1 = from[1] + NODE / 2f;
-                float x2 = to[0] + NODE / 2f;
-                float y2 = to[1] + NODE / 2f;
+                float x1 = from[0] + nodeSize() / 2f;
+                float y1 = from[1] + nodeSize() / 2f;
+                float x2 = to[0] + nodeSize() / 2f;
+                float y2 = to[1] + nodeSize() / 2f;
                 final int color = SkillTreeClientState.tierOf(node.id()) > 0
                         ? LINE_ACTIVE : LINE_LOCKED;
                 float midX = (x1 + x2) / 2f;
@@ -863,8 +880,8 @@ public final class SkillTreeScreen extends ModularUIScreen {
         Vector2f hostLocal = canvasHost.getLocalMouse(lastMouseX, lastMouseY);
         float mx = Math.max(2, hostLocal.x);
         float my = Math.max(2, hostLocal.y);
-        final float placeX = Math.max(0, worldLocal.x - NODE / 2f);
-        final float placeY = Math.max(0, worldLocal.y - NODE / 2f);
+        final float placeX = Math.max(0, worldLocal.x - nodeSize() / 2f);
+        final float placeY = Math.max(0, worldLocal.y - nodeSize() / 2f);
         contextMenu = buildMenuPanel(mx, my,
                 panel -> panel.addChild(menuItemTranslated(
                         "gui.originsx_skilltree.menu.add",
@@ -1101,7 +1118,8 @@ public final class SkillTreeScreen extends ModularUIScreen {
         detailDesc.setText(resolveDescription(node));
 
         int tier = SkillTreeClientState.tierOf(node.id());
-        double nowFactor = TIER_FACTOR[Math.min(tier, 3)];
+        double[] tf = tierFactors();
+        double nowFactor = tf[Math.min(tier, 3)];
         infoTier.setText(Component.literal(translated("gui.originsx_skilltree.tier_status",
                 tier, 3)
                 + (requirementsMet(node) ? "" : "   " + translated("gui.originsx_skilltree.req_missing"))));
@@ -1113,7 +1131,7 @@ public final class SkillTreeScreen extends ModularUIScreen {
             int cost = nextCost(node);
             infoEffect.setText(Component.literal(translated("gui.originsx_skilltree.now_next",
                     describePower(node.power(), nowFactor),
-                    describePower(node.power(), TIER_FACTOR[tier + 1]))));
+                    describePower(node.power(), tf[tier + 1]))));
             int have = shardCount();
             boolean affordable = cost >= 0 && have >= cost;
             infoCost.setText(Component.literal(
@@ -1294,8 +1312,8 @@ public final class SkillTreeScreen extends ModularUIScreen {
                 continue;
             }
             var node = element.getAsJsonObject();
-            node.addProperty("x", (node.has("x") ? node.get("x").getAsInt() : 0) * CELL);
-            node.addProperty("y", (node.has("y") ? node.get("y").getAsInt() : 0) * CELL);
+            node.addProperty("x", (node.has("x") ? node.get("x").getAsInt() : 0) * cellSize());
+            node.addProperty("y", (node.has("y") ? node.get("y").getAsInt() : 0) * cellSize());
         }
     }
 

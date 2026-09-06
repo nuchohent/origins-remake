@@ -1,6 +1,7 @@
 {
   "category.originsx": "OriginsX",
   "creativetab.originsx": "OriginsX",
+  "section.originsx.races": "Расы и способности",
   "gui.originsx_skilltree.no_addon": "Установите аддон «Дерево навыков», чтобы редактировать деревья",
   "gui.originsx_skilltree.open_tree": "Дерево навыков",
   "item.originsx.medal.tooltip": "ПКМ — открыть меню выбора и создания расы",
@@ -272,6 +273,7 @@
   "originsx.creator.type.reach": "Длина рук",
   "originsx.creator.type.resource": "Запас сил",
   "originsx.creator.type.safe_landing": "Мягкая посадка",
+  "originsx.creator.type.creative_flight": "Креативный полёт",
   "originsx.creator.type.shadow_step": "Теневой шаг",
   "originsx.creator.type.size_control": "Контроль размера",
   "originsx.creator.type.spider_climb": "Паучий ход",
@@ -295,6 +297,7 @@
   "originsx.gui.delete.done": "Раса удалена.",
   "originsx.gui.delete.failed": "Не удалось удалить расу.",
   "originsx.gui.difficulty": "Сложность",
+  "originsx.gui.layer.name": "Слой",
   "originsx.gui.edit": "Редактировать",
   "originsx.gui.looks": "Внешность",
   "originsx.gui.edit.failed": "Не удалось загрузить расу для редактирования.",

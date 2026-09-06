@@ -1,6 +1,7 @@
 {
   "category.originsx": "OriginsX",
   "creativetab.originsx": "OriginsX",
+  "section.originsx.races": "Раси та здібності",
   "gui.originsx_skilltree.no_addon": "Встановіть аддон «Дерево навичок», щоб редагувати дерева",
   "gui.originsx_skilltree.open_tree": "Дерево навичок",
   "item.originsx.medal.tooltip": "ПКМ — відкрити меню вибору та створення раси",
@@ -273,6 +274,7 @@
   "originsx.creator.type.reach": "Довжина рук",
   "originsx.creator.type.resource": "Запас сил",
   "originsx.creator.type.safe_landing": "М'яке приземлення",
+  "originsx.creator.type.creative_flight": "Креативний політ",
   "originsx.creator.type.shadow_step": "Тіньовий крок",
   "originsx.creator.type.size_control": "Контроль розміру",
   "originsx.creator.type.spider_climb": "Павучий хід",
@@ -295,6 +297,7 @@
   "originsx.gui.delete.done": "Расу видалено.",
   "originsx.gui.delete.failed": "Не вдалося видалити расу.",
   "originsx.gui.difficulty": "Складність",
+  "originsx.gui.layer.name": "Шар",
   "originsx.gui.edit": "Редагувати",
   "originsx.gui.looks": "Зовнішність",
   "originsx.gui.edit.failed": "Не вдалося завантажити цю расу для редагування.",

@@ -53,8 +53,8 @@ public final class TreeManager {
      */
     public static Power scaledClone(SkillTree tree, TreeNode node, int tier) {
         double factor = switch (tier) {
-            case 1 -> TierScaler.TIER_1;
-            case 2 -> TierScaler.TIER_2;
+            case 1 -> TierScaler.tier1();
+            case 2 -> TierScaler.tier2();
             default -> 1.0;
         };
         String key = nodeKey(tree, node) + "#" + tier;

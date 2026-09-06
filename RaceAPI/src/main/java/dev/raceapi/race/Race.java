@@ -62,6 +62,15 @@ public interface Race {
     default void onRemove(ServerPlayer player) {
     }
 
+    /**
+     * The origin layer this race belongs to. Players may select one race per
+     * layer; powers across all selected layers stack. Defaults to
+     * {@code "origin"}, which keeps single-race packs fully compatible.
+     */
+    default String getLayer() {
+        return "origin";
+    }
+
     /** Hide this race from the selection GUI (e.g. secret/dev races). */
     default boolean isHidden() {
         return false;

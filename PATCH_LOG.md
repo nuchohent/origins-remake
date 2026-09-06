@@ -1,3 +1,85 @@
+## Origin Layers — OriginsX 2.0.0 / Race API 2.0.0 / Skill Tree 2.0.0 (2026-09-05) — многослойные расы (Phase A)
+
+У рас появился слой (`layer`), выбор хранится как выбор в каждом слое отдельно (`Map<слой, раса>`), косметика из выбранных рас всех слоёв суммируется.
+
+### Backend / Race API 2.0.0
+- `Race.getLayer()`/`SimpleRace.layer` — у каждой расы есть слой (по умолчанию `origin`); свойство задаётся в датапаке `{"layer":"...","type":"originsx","powers":[...]}`.
+- `RaceManager`: хранение выбора переведено на `Map<UUID, Map<String, Race>>`; добавлен `clearLayer`, `applyPersistedRace` восстанавливает выбор всех слоёв.
+- `RaceSavedData`: формат строки изменён на составной (все слои через разделитель); миграция старой строки с одиночной расой в слой `origin` включена.
+- `SyncRacePayload`: по сети уходит карта всех слоёв игрока; `SelectedRaceClient` держит выбор по слоям (`selectedIn(layer)`, `allLayers()`), `getRace()` — составная раса, на которой завязаны пайплайн способностей и каунтеры.
+- `RaceRegistry.layers()`/`playable(layer)` — список слоёв и расы конкретного слоя.
+- **Новый power-тип `creative_flight`**: выдаёт творческий полёт на слое выбора, снимает при снятии расы, пере-выставляет на каждом тике.
+- **Команда**: `clear <player> [layer]` (без слоя — очистить всё).
+
+### GUI / OriginsX 2.0.0
+- **Табы слоёв** над поиском в меню выбора расы; выбор в каждом слое отдельный; карточка «Случайная раса» и подсветка текущей расы работают в рамках активного слоя; на вкладке слоя с выбором стоит маркер `•`.
+- В деталях расы выводится строка «[слой] … общая сложность: N (X слоёв)» (ключи `originsx.gui.layer.difficulty_total`/`originsx.gui.layer.count`).
+- «Сбросить» сбрасывает только текущий слой; удаление расы чистит её слой.
+- Редактор рас: в палитре типов способностей добавлен `Creative Flight`.
+- `SelectRacePayload(raceId, clearLayer)`: непустой id — выбрать в свой слой; пустой id с непустым `clearLayer` — очистить конкретный слой; оба пустые — полный сброс.
+
+### Cosmetics / Looks
+- Ресайз сети: `PlayerRacePayload(uuid, Map<слой, раса>)` — клиенты знают выбор всех слоёв каждого игрока; `PlayerRaceClient` хранит карту слоёв; `LooksClient.resolveFor` суммирует косметику выбранных рас всех слоёв (превью редактируемой расы по-прежнему в приоритете).
+
+### Skill Tree
+- Правок не потребовал: применение расы и дерево навыков уже завязаны на мультислойный `RaceManager.applyPersistedRace` и составную `Selection` (выбор дерева — по primary-расе). Бамп версии до 2.0.0.
+
+### Версии и конвенции
+- Race API → 2.0.0 (ломающее изменение хранения), OriginsX → 2.0.0, Skill Tree → 2.0.0; Looks останется 1.0.1-alpha (бамп следом). Минимальная версия Race API для сателлитов поднята до 2.0.0 во всех трёх `mods.toml`.
+- Новое свойство слоя обратно совместимо по датапакам: расы без `layer` читаются как `origin`.
+
+Сборка: `BUILD SUCCESSFUL` по всем четырём модулям (Race API / OriginsX / Skill Tree / Looks).
+
+---
+
+## OriginsX 1.11.4 / Skill Tree 1.5.1 / OriginsX Looks 1.0.1-alpha (дополнения, 2026-09-04) — бамп после пакета фич секций, зеркала и сохранения
+
+### Fancy Tab Sections (FTS) стал ОПЦИОНАЛЬНЫМ зависимостью во всех трёх модах
+- Убран `jarJar`-встраивание FTS и локальный maven-репо: моды больше не носят FTS внутри jar.
+- Секции (OriginsX / Дерево навыков SkillTree / Косметика Looks) регистрируются только при установленном standalone `fancytabsections` — guard `ModList.get().isLoaded("fancytabsections")` в начале `register()` каждой вкладки. Без FTS моды работают с обычными вкладками.
+- В `mods.toml` зависимости на FTS нет; для инстанса положен `fancytabsections-6.0-NEOFORGE-26.2.jar` в папку модов.
+- Все три вкладки перекрашены в единую палитру меню выбора расы: баннер `#3D5C8A`, акцент `#88CCFF`, белый текст `#FFFFFF`, тёмная обводка `#14141A` (тот же набор, что у `RaceSelectionScreen`/`UiPalette`).
+
+### OriginsX Looks 1.0.1-alpha
+- **Зеркало образа**: новая текстура 16×16 (серебристо-голубой корпус, градиент стекла, стальная ручка, тёмный контур) — старая была плейсхолдером 235 Б.
+- **Починена модель предмета** (`Missing item model for originsx_looks:look_mirror`): в MC 26.2 нужен новый формат `assets/originsx_looks/items/look_mirror.json` (`{"model":{"type":"minecraft:model",...}}`) — создан по образцу `race_medal` из OriginsX.
+- **Сохранение спрашивает расу**: кнопка Save открывает диалог «Сохранить внешность для расы:» со списком всех играбельных рас (`RaceRegistry.playable()`) — иконка + имя, клик сохраняет внешность в JSON выбранной расы (старая логика писала только в текущую расу игрока).
+- **Сохранение для встроенных рас**: демо-расы лежат в jar-е Race API (файл в мире не найти — отсюда «не нашло расу для сохранения»). Теперь, если расы нет в датапаках мира, мод копирует её JSON из реестра в перезаписываемый датапак мира `<мир>/datapacks/originsx_looks/data/<ns>/raceapi/races/<id>.json` + `pack.mcmeta` (pack_format 90/82–999), пишет косметику туда и делает `/reload` — датапак мира грузится после jar и перекрывает встроенную расу.
+- Локализация en/ru/uk: добавлены `gui.originsx_looks.save.ask_race` и `gui.originsx_looks.save.no_races`.
+
+Сборка: `BUILD SUCCESSFUL` по всем трём модулям, jar'ы переустановлены в инстанс (OriginsX 252 823 Б, SkillTree 149 132 Б, Looks 173 196 Б).
+
+---
+
+## OriginsX Skill Tree 1.5.0 (дополнение, 2026-09-04) — NeoForge-конфиг + удаление примера дерева дриады
+
+Вынесены все захардкоженные значения в `originsx-skilltree.toml` (NeoForge `ModConfigSpec`, тип COMMON). Удалён datapack-пример `data/raceapi/skilltree/dryad.json` и связанные lang-ключи (dryad-ноды, заголовок дерева) — деревья создаются через ин-гейм редактор или внешние datapack-пакеты.
+
+### Конфиг `originsx-skilltree.toml`
+- `tiers.tier1_factor` (0.34) / `tier2_factor` (0.67) — множители силы по тирам
+- `tiers.max_tier` (3) — макс. уровень узла
+- `costs.default_cost_1` (2) / `default_cost_2` (3) / `default_cost_3` (5) — дефолтная стоимость
+- `editor.canvas_width` (1600) / `canvas_height` (1200) — размер канваса редактора
+- `editor.cell_size` (34) — размер сетки (legacy координаты)
+- `editor.node_size` (26) — размер кнопки узла
+
+### Изменения в коде
+- **SkillTreeConfig.java** (новый) — `ModConfigSpec`-конфиг с singleton + fallback на дефолты
+- **SkillTreeMod.java** — конструктор принимает `ModContainer`, регистрация конфига через `registerConfig(COMMON, ...)`
+- **TierScaler.java** — `TIER_1`/`TIER_2` константы заменены на `tier1()`/`tier2()` (читают из конфига)
+- **TreeManager.java** — вызовы `TierScaler.tier1()`/`tier2()` вместо констант
+- **SkillTreeScreen.java** — `CELL`/`NODE`/`WORLD_W`/`WORLD_H`/`TIER_FACTOR` заменены на `cellSize()`/`nodeSize()`/`canvasWidth()`/`canvasHeight()`/`tierFactors()`
+- **SkillTreeLoader.java** — Javadoc-пример обновлён (generic вместо dryad)
+- **Lang-файлы** (en/ru/uk) — удалены ключи `tree.originsx_skilltree.dryad` и `node.originsx_skilltree.dryad_*`
+
+### Удалено
+- `data/raceapi/skilltree/dryad.json` (и пустые родительские директории)
+- 10 lang-ключей dryad (3 языка × 3 ноды + заголовок)
+
+Сборка: `BUILD SUCCESSFUL`, jar переустановлен в инстанс (149 534 Б).
+
+---
+
 ## OriginsX Looks 1.0.0-alpha (дополнение, 2026-08-30) — геометрия layout-режима переведена с pose на layout-позиции
 
 Рамка наведения/выделения в Ctrl+L рисовалась в левом верхнем углу, все боксы плюсовались друг на друга и было не понятно, что выбирается.

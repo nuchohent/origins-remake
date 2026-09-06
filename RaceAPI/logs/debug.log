@@ -1,0 +1,3 @@
+[08Aug2026 15:52:38.217] [Test worker/ERROR] [dev.raceapi.power.PowerFactory/]: Power test:x is missing a 'type' field
+[08Aug2026 15:52:38.231] [Test worker/ERROR] [dev.raceapi.power.PowerFactory/]: Unknown power type 'not_a_real_type' for power test:x
+[08Aug2026 15:52:38.387] [Test worker/ERROR] [dev.raceapi.power.condition.Conditions/]: Unknown condition type 'bogus_condition'

@@ -1,4 +1,8 @@
 {
+  "creativetab.originsx_looks": "OriginsX Looks",
+  "item.originsx_looks.look_mirror": "Look Mirror",
+  "item.originsx_looks.mirror.tooltip": "Right-click to open the appearance editor",
+  "section.originsx_looks.cosmetics": "Cosmetics",
   "gui.originsx_looks.add": "Add",
   "gui.originsx_looks.close": "Close",
   "gui.originsx_looks.clear": "Clear selection",
@@ -24,6 +28,8 @@
   "gui.originsx_looks.picker.none": "Select...",
   "gui.originsx_looks.picker.search": "Search...",
   "gui.originsx_looks.save": "Save",
+  "gui.originsx_looks.save.ask_race": "Save appearance for race:",
+  "gui.originsx_looks.save.no_races": "No playable races found",
   "gui.originsx_looks.save.done": "Appearance saved and reloaded",
   "gui.originsx_looks.save.failed": "Failed to save appearance",
   "gui.originsx_looks.save.not_found": "Race file not found in world datapacks",

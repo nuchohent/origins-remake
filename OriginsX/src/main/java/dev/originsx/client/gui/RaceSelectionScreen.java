@@ -125,6 +125,16 @@ public final class RaceSelectionScreen {
         holder.wrapper = new UIElement().layout(l -> l.widthPercent(32).flexDirection(FlexDirection.COLUMN)
                 .gapAll(4).heightPercent(100));
 
+        holder.layers = new ArrayList<>(RaceRegistry.layers());
+        if (holder.layers.isEmpty()) {
+            holder.layers.add("origin");
+        }
+        holder.currentLayer = holder.layers.get(0);
+        // Layer tabs always render: even a lone "origin" tab reads as the
+        // active layer and keeps the row present once a multi-layer pack is
+        // loaded (a tab row that appears/disappears on reload feels broken).
+        holder.wrapper.addChild(layerTabs(holder));
+
         var searchField = new TextField();
         searchField.layout(l -> l.widthPercent(100).height(20));
         searchField.setText("");
@@ -141,12 +151,76 @@ public final class RaceSelectionScreen {
         scroller.viewContainer(view -> {
             view.layout(l -> l.flexDirection(FlexDirection.COLUMN).gapAll(3).widthPercent(100));
             view.addChild(randomRaceCard(holder));
-            for (Race race : RaceRegistry.playable()) {
+            for (Race race : racesOf(holder, "")) {
                 view.addChild(raceCard(race, holder));
             }
         });
         holder.wrapper.addChild(scroller);
         return holder;
+    }
+
+    /**
+     * Races that belong to the currently shown layer (plus every race when the
+     * layer filter is empty, used to build the search view).
+     */
+    private static List<Race> racesOf(RaceListHolder holder, String filter) {
+        List<Race> races = new ArrayList<>();
+        for (Race race : RaceRegistry.playable()) {
+            if (holder.currentLayer != null && !race.getLayer().equals(holder.currentLayer)) {
+                continue;
+            }
+            if (filter.isEmpty() || race.getDisplayName().getString().toLowerCase().contains(filter)
+                    || race.getId().toString().toLowerCase().contains(filter)) {
+                races.add(race);
+            }
+        }
+        return races;
+    }
+
+    // ── Layer tabs ──────────────────────────────────────────────────
+
+    private static UIElement layerTabs(RaceListHolder holder) {
+        var row = new UIElement().layout(l -> l.widthPercent(100).flexDirection(FlexDirection.ROW).gapAll(3)
+                .alignItems(AlignItems.CENTER));
+        holder.tabs.clear();
+        for (String layer : holder.layers) {
+            Button tab = new Button();
+            // Content-hugging pill with a guaranteed clickable area: a bare
+            // height-only button can collapse to its text width and render as
+            // an unclickable sliver. minWidth + flexShrink(0) keeps it a real
+            // button in every case (single-layer pack, long layer names).
+            tab.layout(l -> l.minWidth(48).flexShrink(0).height(20));
+            tab.setOnClick(e -> switchLayer(holder, layer));
+            row.addChild(tab);
+            holder.tabs.add(tab);
+        }
+        refreshTabs(holder);
+        return row;
+    }
+
+    private static void switchLayer(RaceListHolder holder, String layer) {
+        if (layer.equals(holder.currentLayer)) {
+            return;
+        }
+        holder.currentLayer = layer;
+        holder.randomSelected = false;
+        refreshTabs(holder);
+        rebuildRaceList(holder);
+    }
+
+    private static void refreshTabs(RaceListHolder holder) {
+        for (int i = 0; i < holder.tabs.size(); i++) {
+            String layer = holder.layers.get(i);
+            Button tab = holder.tabs.get(i);
+            boolean active = layer.equals(holder.currentLayer);
+            boolean hasSelection = SelectedRaceClient.selectedIn(layer) != null;
+            String text = (hasSelection ? "\u2022 " : "") + layer;
+            tab.setText(text);
+            // Standard button look (self-drawing base/hover/pressed textures);
+            // only the text colour marks the active layer tab. Layers with an
+            // already-selected race get a bullet marker.
+            tab.textStyle(s -> s.fontSize(9).textColor(active ? 0xFFFFFFFF : 0xFF8A8A8A));
+        }
     }
 
     private static void rebuildRaceList(RaceListHolder holder) {
@@ -155,11 +229,8 @@ public final class RaceSelectionScreen {
             view.layout(l -> l.flexDirection(FlexDirection.COLUMN).gapAll(3).widthPercent(100));
             view.addChild(randomRaceCard(holder));
             String filter = holder.searchFilter == null ? "" : holder.searchFilter;
-            for (Race race : RaceRegistry.playable()) {
-                if (filter.isEmpty() || race.getDisplayName().getString().toLowerCase().contains(filter)
-                        || race.getId().toString().toLowerCase().contains(filter)) {
-                    view.addChild(raceCard(race, holder));
-                }
+            for (Race race : racesOf(holder, filter)) {
+                view.addChild(raceCard(race, holder));
             }
         });
     }
@@ -177,7 +248,7 @@ public final class RaceSelectionScreen {
                 randomCardText());
         card.addEventListener(UIEvents.MOUSE_DOWN, e -> {
             if (e.button == 0) {
-                List<Race> playable = new ArrayList<>(RaceRegistry.playable());
+                List<Race> playable = new ArrayList<>(racesOf(holder, ""));
                 if (playable.isEmpty()) return;
                 Race random = playable.get(RANDOM.nextInt(playable.size()));
                 holder.randomSelected = true;
@@ -197,7 +268,7 @@ public final class RaceSelectionScreen {
     }
 
     private static UIElement raceCard(Race race, RaceListHolder holder) {
-        boolean isCurrent = race.getId().equals(SelectedRaceClient.getOrNull());
+        boolean isCurrent = race.getId().equals(SelectedRaceClient.selectedIn(holder.currentLayer));
         boolean highlighted = holder.current != null && holder.current.getId().equals(race.getId());
 
         int bg = highlighted ? 0xFF3D5C8A : isCurrent ? 0xFF2E4460 : 0xFF2B2B33;
@@ -239,18 +310,18 @@ public final class RaceSelectionScreen {
 
         panel.addChild(raceScroller);
 
-        holder.onSelect = race -> rebuildDetail(raceScroller, race);
+        holder.onSelect = race -> rebuildDetail(raceScroller, race, holder);
         return panel;
     }
 
-    private static void rebuildDetail(ScrollerView scroller, Race race) {
+    private static void rebuildDetail(ScrollerView scroller, Race race, RaceListHolder holder) {
         scroller.clearAllScrollViewChildren();
-        scroller.addScrollViewChild(buildDetail(race));
+        scroller.addScrollViewChild(buildDetail(race, holder));
     }
 
     // ── Detail card ─────────────────────────────────────────────────
 
-    private static UIElement buildDetail(Race race) {
+    private static UIElement buildDetail(Race race, RaceListHolder holder) {
         var panel = new UIElement()
                 .layout(l -> l.widthPercent(100).flexDirection(FlexDirection.COLUMN).gapAll(8).paddingAll(10))
                 .style(s -> s.background(new ColorRectTexture(0xFF22222A)));
@@ -273,6 +344,17 @@ public final class RaceSelectionScreen {
                         .textStyle(style -> style.fontSize(8).textColor(0xFF888888)),
                 new DifficultyBar(race.getDifficulty())
         );
+
+        // Layer tag: per-race, informational (multi-layer packs can show what
+        // tab this race lives in). No aggregate — the bar above is the race's
+        // own difficulty.
+        var layerInfo = new Label().setText(
+                Component.translatable("originsx.gui.layer.name")
+                        .append(Component.literal(": ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal(race.getLayer())
+                                .withStyle(ChatFormatting.AQUA)))
+                .textStyle(style -> style.fontSize(8).textColor(0xFF999999));
+        difficultyRow.addChild(layerInfo);
 
         // Description
         var description = new Label().setText(race.getDescription())
@@ -316,12 +398,12 @@ public final class RaceSelectionScreen {
         var actions = new UIElement().layout(l -> l.widthPercent(100).flexDirection(FlexDirection.COLUMN).gapAll(4));
         var actionsRowA = new UIElement().layout(l -> l.widthPercent(100).flexDirection(FlexDirection.ROW).gapAll(6));
         var selectButton = new Button();
-        boolean isCurrentRace = race.getId().equals(SelectedRaceClient.getOrNull());
+        boolean isCurrentRace = race.getId().equals(SelectedRaceClient.selectedIn(holder.currentLayer));
         selectButton.setText(isCurrentRace ? "originsx.gui.selected" : "originsx.gui.select")
                 .layout(l -> l.flex(1).height(22));
         selectButton.textStyle(s -> s.fontSize(10));
         selectButton.setOnClick(e -> {
-            ClientPacketDistributor.sendToServer(new SelectRacePayload(race.getId().toString()));
+            ClientPacketDistributor.sendToServer(new SelectRacePayload(race.getId().toString(), ""));
             Minecraft.getInstance().setScreenAndShow(null);
         });
 
@@ -329,7 +411,7 @@ public final class RaceSelectionScreen {
         resetButton.setText("originsx.gui.reset").layout(l -> l.flex(1).height(22));
         resetButton.textStyle(s -> s.fontSize(10));
         resetButton.setOnClick(e -> {
-            ClientPacketDistributor.sendToServer(new SelectRacePayload(""));
+            ClientPacketDistributor.sendToServer(new SelectRacePayload("", holder.currentLayer));
             Minecraft.getInstance().setScreenAndShow(null);
         });
         actions.addChildren(selectButton, resetButton);
@@ -446,8 +528,9 @@ public final class RaceSelectionScreen {
         try {
             Files.deleteIfExists(file);
             CUSTOM_RACE_FILES.remove(race.getId().toString());
-            if (SelectedRaceClient.getOrNull() != null && SelectedRaceClient.getOrNull().equals(race.getId())) {
-                ClientPacketDistributor.sendToServer(new SelectRacePayload(""));
+            if (SelectedRaceClient.selectedIn(race.getLayer()) != null
+                    && SelectedRaceClient.selectedIn(race.getLayer()).equals(race.getId())) {
+                ClientPacketDistributor.sendToServer(new SelectRacePayload("", race.getLayer()));
             }
             if (server != null) {
                 server.execute(() -> server.getCommands().performPrefixedCommand(
@@ -700,6 +783,9 @@ public final class RaceSelectionScreen {
         private Race current;
         private boolean randomSelected;
         private String searchFilter;
+        private String currentLayer = "origin";
+        private final java.util.List<Button> tabs = new ArrayList<>();
+        private java.util.List<String> layers = java.util.List.of();
         private java.util.function.Consumer<Race> onSelect;
 
         private void select(Race race) {

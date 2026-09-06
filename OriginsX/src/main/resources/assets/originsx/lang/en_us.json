@@ -1,6 +1,7 @@
 {
   "category.originsx": "OriginsX",
   "creativetab.originsx": "OriginsX",
+  "section.originsx.races": "Races & Powers",
   "gui.originsx_skilltree.no_addon": "Install the Skill Tree addon to edit trees",
   "gui.originsx_skilltree.open_tree": "Skill Tree",
   "item.originsx.medal.tooltip": "Right-click to open the race selection & creation menu",
@@ -272,6 +273,7 @@
   "originsx.creator.type.reach": "Arm Length",
   "originsx.creator.type.resource": "Resource Pool",
   "originsx.creator.type.safe_landing": "Safe landing",
+  "originsx.creator.type.creative_flight": "Creative flight",
   "originsx.creator.type.shadow_step": "Shadow step",
   "originsx.creator.type.size_control": "Size Control",
   "originsx.creator.type.spider_climb": "Spider climb",
@@ -295,6 +297,7 @@
   "originsx.gui.delete.done": "Race deleted.",
   "originsx.gui.delete.failed": "Could not delete this race.",
   "originsx.gui.difficulty": "Difficulty",
+  "originsx.gui.layer.name": "Layer",
   "originsx.gui.edit": "Edit",
   "originsx.gui.looks": "Looks",
   "originsx.gui.edit.failed": "Could not load this race for editing.",

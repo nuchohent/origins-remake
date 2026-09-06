@@ -15,8 +15,15 @@ import com.google.gson.JsonPrimitive;
 public final class TierScaler {
 
     /** Power strength at each unlockable tier (tier 3 uses the original power). */
-    public static final double TIER_1 = 0.34;
-    public static final double TIER_2 = 0.67;
+    public static double tier1() {
+        return dev.originsx.skilltree.SkillTreeConfig.SPEC.isLoaded()
+                ? dev.originsx.skilltree.SkillTreeConfig.INSTANCE.tier1Factor.get() : 0.34;
+    }
+
+    public static double tier2() {
+        return dev.originsx.skilltree.SkillTreeConfig.SPEC.isLoaded()
+                ? dev.originsx.skilltree.SkillTreeConfig.INSTANCE.tier2Factor.get() : 0.67;
+    }
 
     /** Keys whose value scales with power strength. */
     private static final String[] MAGNITUDE = {
