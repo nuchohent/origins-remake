@@ -1,3 +1,16 @@
+## Публичный релиз: GitHub + CI + починка wrapper (2026-09-07)
+
+Репозиторий выложен на публичный GitHub: **https://github.com/nuchohent/origins-remake**.
+
+- **История очищена** (git-filter-repo): дикомпилированный код Minecraft/LDLib2 (`net/`, `com/`), скомпилированные артефакты (`*/bin/`), распакованные ассеты (`assets/ldlib2`, `data/ldlib2`), LDLib2-конфиги в корне (`META-INF/`, `ldlib2.mixins.json`, `kubejs.plugins.txt`) и заброшенный рофл-мод `OriginsUI` вырезаны со всех коммитов. Осталось: исходники 4 модулей + записи (PATCH_LOG / STATUS / devlog / аудиты / чеклист / runtime-логи RaceAPI/logs + build-логи).
+- **README** переписан как handover-kit; добавлены `LICENSE` (MIT) и `CONTRIBUTING.md`.
+- **gradle wrapper починен** — настоящая причина старого «грабля»: `gradlew` (строка `-jar "$APP_HOME/gradle/wrapper/gradle-wrapper.jar"`) требует `Main-Class` в манифесте, а его не было. Перегенерирован через Gradle 9.2.1 во всех 4 модулях и в корне.
+- Убран захардкоженный путь `org.gradle.java.installations.paths=/home/naccel/...` из `RaceAPI/gradle.properties` (переносимость сборки).
+- **GitHub Actions CI** (`.github/workflows/build.yml`): сборка Race API → подкладывание jar в `libs/` сателлитов → сборка OriginsX/SkillTree/Looks → артефакты workflow; по тегу `v*` дополнительно публикуется GitHub Release с jar'ами.
+- **Сборка проверена начисто** с JDK 25 (Temurin) через починенный wrapper: Race API 9m34s, OriginsX 4m55s, SkillTree 2m30s, Looks 2m13s — `BUILD SUCCESSFUL` × 4. Тег `v2.0.0`.
+
+---
+
 ## Origin Layers — OriginsX 2.0.0 / Race API 2.0.0 / Skill Tree 2.0.0 (2026-09-05) — многослойные расы (Phase A)
 
 У рас появился слой (`layer`), выбор хранится как выбор в каждом слое отдельно (`Map<слой, раса>`), косметика из выбранных рас всех слоёв суммируется.

@@ -14,7 +14,7 @@ _Обновлено: 2026-09-05 (Origin Layers — многослойные ра
 - **Skill Tree** — правок не потребовал (уже мультислойный через `applyPersistedRace`/`Selection`).
 - **Версии**: Race API → **2.0.0**, OriginsX → **2.0.0**, Skill Tree → **2.0.0**; Looks остаётся **1.0.1-alpha** (бамп следом). Минимальная Race API для сателлитов поднята до 2.0.0.
 - **Сборка**: полный `build` всех 4 модулей — `BUILD SUCCESSFUL` (Race API / OriginsX / Skill Tree / Looks).
-- **Локальная сборка**: JDK 25 взят из `~/.gradle/jdks/jdk-25.0.4.1+1` (правка пути в `RaceAPI/gradle.properties` + `~/.gradle/gradle.properties`; gradle wrapper jar в репо повреждён — сборка идёт напрямую из `~/.gradle/wrapper/dists/gradle-9.2.1-bin/.../bin/gradle`).
+- **Локальная сборка**: JDK 25 в `JAVA_HOME` (захардкоженный путь `org.gradle.java.installations.paths` из `RaceAPI/gradle.properties` намеренно убран 2026-09-07). Wrapper починен (см. PATCH_LOG), сборка из корня: `JAVA_HOME=<jdk25> ./gradlew -p <модуль> build`.
 
 ### 📦 JARы (собрано 2026-09-05)
 - `RaceAPI/build/libs/Race API-26.2-2.0.0.jar` — также скопирован в `libs/` всех трёх сателлитов (compile-only; старые `1.0.1`/`1.1.0-noldlib` удалены).
@@ -30,7 +30,7 @@ _Обновлено: 2026-09-05 (Origin Layers — многослойные ра
 
 ### Замечания среды
 - Java 25 (Temurin 25.0.4.1) — `/home/naccel/.gradle/jdks/jdk-25.0.4.1+1`; системный Java 26 для модуля не подходит (toolchain 25).
-- `gradlew` в репо неработоспособен (gradle-wrapper.jar без Main-Class) — пользоваться `~/.gradle/wrapper/dists/gradle-9.2.1-bin/2t0n5ozlw9xmuyvbp7dnzaxug/gradle-9.2.1/bin/gradle`.
+- `gradlew` починен 2026-09-07 (перегенерирован через Gradle 9.2.1, в манифесте есть Main-Class) — сборка через `./gradlew -p <модуль> build`. На GitHub Actions всё собирает CI (`.github/workflows/build.yml`).
 
 ---
 _Старый вводный блок ниже (история до этой сессии) — сохранён целиком._

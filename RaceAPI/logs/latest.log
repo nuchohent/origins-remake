@@ -1,7 +1,7 @@
-[16:13:54] [Test worker/ERROR]: Power test:x is missing a 'type' field
-[16:13:54] [Test worker/ERROR]: Unknown power type 'not_a_real_type' for power test:x
-[16:13:54] [Test worker/ERROR]: Unknown condition type 'bogus_condition'
-[16:13:54] [Test worker/ERROR]: Condition 'all_of' failed to parse
+[00:15:32] [Test worker/ERROR]: Power test:x is missing a 'type' field
+[00:15:32] [Test worker/ERROR]: Unknown power type 'not_a_real_type' for power test:x
+[00:15:32] [Test worker/ERROR]: Unknown condition type 'bogus_condition'
+[00:15:32] [Test worker/ERROR]: Condition 'all_of' failed to parse
 java.lang.IllegalArgumentException: composite condition needs a non-empty 'conditions' array
 	at dev.raceapi.power.condition.Conditions.subConditions(Conditions.java:631)
 	at dev.raceapi.power.condition.Conditions.lambda$static$17(Conditions.java:667)
