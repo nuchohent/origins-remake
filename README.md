@@ -72,9 +72,11 @@ statuses are all committed so anyone can keep the project going. Start with `STA
 ```bash
 # 1. ядро
 ./gradlew -p RaceAPI build
-# 2. подложить свежий jar Race API в libs/ сателлитов (главный jar, не sources/dev)
+# 2. подложить зависимости в libs/ сателлитов: свежий jar Race API + завендоренный FTS
 JAR=$(find RaceAPI/build/libs -name '*.jar' ! -name '*sources*' ! -name '*dev*' | head -n1)
-cp "$JAR" OriginsX/libs/ && cp "$JAR" SkillTree/libs/ && cp "$JAR" Looks/libs/
+for d in OriginsX SkillTree Looks; do
+  mkdir -p "$d/libs" && cp "$JAR" "$d/libs/" && cp third_party/fancytabsections-6.0-NEOFORGE-26.2.jar "$d/libs/"
+done
 # 3. сателлиты
 ./gradlew -p OriginsX build
 ./gradlew -p SkillTree build
@@ -91,8 +93,9 @@ Jar'ы — в `*/build/libs/`.
 - **`gradlew` рабочий** (замечание в old-STATUS о «битом wrapper.jar» было про
   отсутствие Main-Class в манифесте — он не нужен). Единственное условие — Java в
   `JAVA_HOME`; на машине без Java билда не будет.
-- сателлиты компилируются против `compileOnly`-jar-а RaceAPI из `libs/` — после
-  сборки ядра перекладывай свежий jar (см. команду выше).
+- сателлиты компилируются против `compileOnly`-jar'ов из `libs/` — Race API
+  (`build/libs` ядра после сборки) и **Fancy Tab Sections** (завендорен в `third_party/`, см.
+  `third_party/README.md`). Скрипт подкладывания обеих — в шаге 2 выше.
 - **CI**: GitHub Actions собирает все 4 модуля в `.github/workflows/build.yml`,
   jar'ы прикладывает к артефактам; по тегам `v*` публикует GitHub Release.
 - Локальные пути `runs/`, `build/`, `.gradle/`, `bin/` и распакованные источники

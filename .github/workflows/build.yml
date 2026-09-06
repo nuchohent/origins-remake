@@ -27,13 +27,17 @@ jobs:
       - name: Build Race API (core)
         run: ./gradlew -p RaceAPI build --no-daemon --stacktrace
 
-      - name: Stage Race API into satellite libs
+      - name: Stage deps into satellite libs
         run: |
           set -e
           JAR=$(find RaceAPI/build/libs -maxdepth 1 -name '*.jar' \
                     ! -name '*sources*' ! -name '*javadoc*' ! -name '*dev*' | head -n1)
           echo "Staging $JAR"
-          for d in OriginsX SkillTree Looks; do mkdir -p "$d/libs"; cp "$JAR" "$d/libs/"; done
+          for d in OriginsX SkillTree Looks; do
+            mkdir -p "$d/libs"
+            cp "$JAR" "$d/libs/"
+            cp third_party/fancytabsections-6.0-NEOFORGE-26.2.jar "$d/libs/"
+          done
 
       - name: Build satellites
         run: |

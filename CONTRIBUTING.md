@@ -36,13 +36,19 @@ docs/      — гайды по JSON/Java API.
 
 ```bash
 ./gradlew -p RaceAPI build          # сначала ядро
-cp RaceAPI/build/libs/"Race API-26.2-"*.jar "не-sources" → OriginsX/libs/, SkillTree/libs/, Looks/libs/
+JAR=$(find RaceAPI/build/libs -name '*.jar' ! -name '*sources*' ! -name '*dev*' | head -n1)
+for d in OriginsX SkillTree Looks; do   # подложить зависимости в libs/ сателлитов
+  mkdir -p "$d/libs" && cp "$JAR" "$d/libs/" && cp third_party/fancytabsections-6.0-NEOFORGE-26.2.jar "$d/libs/"
+done
 ./gradlew -p OriginsX build
 ./gradlew -p SkillTree build
 ./gradlew -p Looks build
 ```
 
-> На GitHub Actions это делает CI (`./.github/workflows/build.yml`) — jar'ы попадают
+> `libs/` не в гите: Race API собирается заново, Fancy Tab Sections завендорен
+> в `third_party/` (MIT, авторы wdiscute/Kaupenjoe/nanoattack) — подробности в
+> `third_party/README.md`.
+> На GitHub Actions всё делает CI (`.github/workflows/build.yml`) — jar'ы попадают
 > в артефакты workflow, а по тегам `v*` публикуются в GitHub Release.
 
 ## Как вносить изменения
