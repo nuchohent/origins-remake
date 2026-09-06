@@ -33,7 +33,7 @@ jobs:
           JAR=$(find RaceAPI/build/libs -maxdepth 1 -name '*.jar' \
                     ! -name '*sources*' ! -name '*javadoc*' ! -name '*dev*' | head -n1)
           echo "Staging $JAR"
-          for d in OriginsX SkillTree Looks; do cp "$JAR" "$d/libs/"; done
+          for d in OriginsX SkillTree Looks; do mkdir -p "$d/libs"; cp "$JAR" "$d/libs/"; done
 
       - name: Build satellites
         run: |
