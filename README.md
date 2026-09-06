@@ -1,5 +1,7 @@
 # OriginsX / Race API / Skill Tree / Looks
 
+[![build](https://github.com/nuchohent/origins-remake/actions/workflows/build.yml/badge.svg)](https://github.com/nuchohent/origins-remake/actions/workflows/build.yml)
+
 **Origins-style race system for Minecraft 26.2 (NeoForge 26.2.0.67).**
 *Система рас в духе Origins: выбор расы, создатель рас без кода, деревья навыков и косметика.*
 
@@ -68,25 +70,31 @@ statuses are all committed so anyone can keep the project going. Start with `STA
 Каждый модуль — отдельный Gradle-проект NeoForge:
 
 ```bash
-gradle -p RaceAPI build   # сначала ядро
-gradle -p OriginsX build  # потом сателлиты
-gradle -p SkillTree build
-gradle -p Looks build
+# 1. ядро
+./gradlew -p RaceAPI build
+# 2. подложить свежий jar Race API в libs/ сателлитов (главный jar, не sources/dev)
+JAR=$(find RaceAPI/build/libs -name '*.jar' ! -name '*sources*' ! -name '*dev*' | head -n1)
+cp "$JAR" OriginsX/libs/ && cp "$JAR" SkillTree/libs/ && cp "$JAR" Looks/libs/
+# 3. сателлиты
+./gradlew -p OriginsX build
+./gradlew -p SkillTree build
+./gradlew -p Looks build
 ```
 
 `BUILD SUCCESSFUL` по 4 модулям подтверждался в PATCH_LOG (сборка 2026-09-05).
+Jar'ы — в `*/build/libs/`.
 
 **Требования и грабли среды (важно):**
 
-- **JDK 25** (toolchain 25; системный JDK 26 не подходит). Рабочий путь прописан в
-  `RaceAPI/gradle.properties` → `org.gradle.java.installations.paths` — вставь свой
-  путь к JDK 25 или положи JDK 25 туда, где Gradle найдёт его сам.
-- **`gradlew` в корне/модулях может не работать** (битый `gradle-wrapper.jar` без
-  Main-Class по состоянию на 2026-09-05). Запасной вариант — локально установленный
-  **Gradle 9.2.1**: `~/.gradle/wrapper/dists/gradle-9.2.1-bin/…/bin/gradle`.
-- Модули компилируются против JDK-совместимого класса RaceAPI из `libs/` сателлитов
-  (`compileOnly`) — после сборки RaceAPI переложить свежий jar в `libs/` трёх сателлитов,
-  если меняешь API.
+- **JDK 25** (toolchain 25; JDK 26 не подходит). Достаточно выставить `JAVA_HOME`
+  на JDK 25 — захардкоженные пути в `gradle.properties` намеренно выпилены.
+- **`gradlew` рабочий** (замечание в old-STATUS о «битом wrapper.jar» было про
+  отсутствие Main-Class в манифесте — он не нужен). Единственное условие — Java в
+  `JAVA_HOME`; на машине без Java билда не будет.
+- сателлиты компилируются против `compileOnly`-jar-а RaceAPI из `libs/` — после
+  сборки ядра перекладывай свежий jar (см. команду выше).
+- **CI**: GitHub Actions собирает все 4 модуля в `.github/workflows/build.yml`,
+  jar'ы прикладывает к артефактам; по тегам `v*` публикует GitHub Release.
 - Локальные пути `runs/`, `build/`, `.gradle/`, `bin/` и распакованные источники
   (`net/`, `com/`) в git не попадают — см. `.gitignore`. Разработчикам сюда
   **не пушить** дикомпилированный код Minecraft/LDLib2 (лицензия Mojang/LowDragMC).
@@ -105,7 +113,8 @@ docs/                                  — гайды JSON/Java (рекомен�
 
 ## 💬 Как участвовать
 
-- Сначала прочитай `STATUS.md` + `PATCH_LOG.md` — там записаны **конвенции, которые нельзя
+- Начни с `CONTRIBUTING.md` — короткий свод правил сборки и конвенций.
+- Затем прочитай `STATUS.md` + `PATCH_LOG.md` — там записаны **конвенции, которые нельзя
   нарушать**: семвер (мажор только при ломании совместимости), баланс (минус = бафф,
   плюс = дебафф), канал выбирается на CF и в строке версии не пишется.
 - Изменения API Race → минимум **минор**, ломающие → **мажор**; сателлиты поднимают
